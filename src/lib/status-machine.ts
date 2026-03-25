@@ -1,15 +1,6 @@
 import type { CaseLifecycleStatus } from "@/lib/constants";
-
-const transitions: Record<CaseLifecycleStatus, CaseLifecycleStatus[]> = {
-  DRAFT: ["DOCUMENTATION"],
-  DOCUMENTATION: ["UNDERWRITING"],
-  UNDERWRITING: ["ACTIVE"],
-  ACTIVE: ["BILLING"],
-  BILLING: ["SETTLING"],
-  SETTLING: ["CLOSED"],
-  CLOSED: [],
-};
+import { getAllowedTransitions as nextAllowedTransitions } from "@/lib/status-transitions";
 
 export function getAllowedTransitions(status: CaseLifecycleStatus): CaseLifecycleStatus[] {
-  return transitions[status];
+  return nextAllowedTransitions(status);
 }

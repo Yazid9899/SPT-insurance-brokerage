@@ -1,0 +1,367 @@
+openapi: 3.0.3
+info:
+  title: CargoShield Open Cover Management API
+  version: 0.1.0
+  description: API contracts for Feature 003 open cover workflows and case integration points.
+servers:
+  - url: http://localhost:3000
+paths:
+  /api/open-covers:
+    get:
+      summary: List open cover agreements
+      tags: [OpenCovers]
+      parameters:
+        - in: query
+          name: page
+          schema: { type: integer, minimum: 1 }
+        - in: query
+          name: pageSize
+          schema: { type: integer, minimum: 1, maximum: 100 }
+        - in: query
+          name: status
+          schema: { type: string, enum: [ACTIVE, EXPIRED, ALL] }
+        - in: query
+          name: q
+          schema: { type: string }
+      responses:
+        '200':
+          description: Open cover list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OpenCoverListResponse'
+    post:
+      summary: Create open cover agreement
+      tags: [OpenCovers]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OpenCoverUpsertRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OpenCoverDetail'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Duplicate reference
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/open-covers/{id}:
+    get:
+      summary: Get open cover details with declarations
+      tags: [OpenCovers]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+        - in: query
+          name: caseStatus
+          schema: { type: string }
+        - in: query
+          name: from
+          schema: { type: string, format: date }
+        - in: query
+          name: to
+          schema: { type: string, format: date }
+      responses:
+        '200':
+          description: Agreement detail + declaration list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OpenCoverDetailResponse'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    put:
+      summary: Update open cover agreement
+      tags: [OpenCovers]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OpenCoverUpsertRequest'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OpenCoverDetail'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Blocked by declaration/date integrity rule
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/cases:
+    get:
+      summary: List cases with server-side URL-param filtering
+      tags: [Cases]
+      parameters:
+        - in: query
+          name: page
+          schema: { type: integer, minimum: 1 }
+        - in: query
+          name: pageSize
+          schema: { type: integer, minimum: 1, maximum: 100 }
+        - in: query
+          name: status
+          schema: { type: string }
+        - in: query
+          name: productLine
+          schema: { type: string }
+        - in: query
+          name: coverType
+          schema: { type: string }
+        - in: query
+          name: q
+          schema: { type: string }
+      responses:
+        '200':
+          description: Case list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CaseListResponse'
+    post:
+      summary: Create case
+      tags: [Cases]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CaseUpsertRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CaseSummary'
+
+  /api/cases/{id}:
+    put:
+      summary: Update case
+      tags: [Cases]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CaseUpsertRequest'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CaseSummary'
+    delete:
+      summary: Delete case (DRAFT only)
+      tags: [Cases]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '204': { description: Deleted }
+        '409':
+          description: Non-draft cases cannot be deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/cases/{id}/status:
+    post:
+      summary: Transition case status with server-side transition map validation
+      tags: [Cases]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CaseStatusTransitionRequest'
+      responses:
+        '200':
+          description: Transition succeeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CaseSummary'
+        '400':
+          description: Invalid transition or validation failure
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    OpenCoverListResponse:
+      type: object
+      required: [items, page, pageSize, total]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OpenCoverListItem'
+        page: { type: integer }
+        pageSize: { type: integer }
+        total: { type: integer }
+
+    OpenCoverListItem:
+      type: object
+      required: [id, reference, clientName, cargoProduct, insurerName, insurerRate, effectiveFrom, effectiveTo, status, declarationCount]
+      properties:
+        id: { type: string }
+        reference: { type: string }
+        clientName: { type: string }
+        cargoProduct: { type: string }
+        insurerName: { type: string }
+        insurerRate: { type: string }
+        effectiveFrom: { type: string, format: date }
+        effectiveTo: { type: string, format: date }
+        status: { type: string, enum: [ACTIVE, EXPIRED] }
+        declarationCount: { type: integer }
+
+    OpenCoverUpsertRequest:
+      type: object
+      required: [reference, clientName, clientCompany, insurerName, productLine, cargoProduct, transportMode, currency, insurerRate, effectiveFrom, effectiveTo]
+      properties:
+        reference: { type: string }
+        clientName: { type: string }
+        clientCompany: { type: string }
+        insurerName: { type: string }
+        productLine: { type: string, enum: [CARGO] }
+        cargoProduct: { type: string }
+        transportMode: { type: string }
+        currency: { type: string }
+        insurerRate: { type: string }
+        effectiveFrom: { type: string, format: date }
+        effectiveTo: { type: string, format: date }
+        notes: { type: string }
+
+    OpenCoverDetailResponse:
+      type: object
+      required: [agreement, declarations]
+      properties:
+        agreement:
+          $ref: '#/components/schemas/OpenCoverDetail'
+        declarations:
+          type: array
+          items:
+            $ref: '#/components/schemas/CaseSummary'
+
+    OpenCoverDetail:
+      allOf:
+        - $ref: '#/components/schemas/OpenCoverListItem'
+        - type: object
+          properties:
+            clientCompany: { type: string }
+            transportMode: { type: string }
+            currency: { type: string }
+            notes: { type: string }
+
+    CaseListResponse:
+      type: object
+      required: [items, page, pageSize, total]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CaseSummary'
+        page: { type: integer }
+        pageSize: { type: integer }
+        total: { type: integer }
+
+    CaseUpsertRequest:
+      type: object
+      required: [productLine, coverType, clientName, currency, sumInsured, clientRate]
+      properties:
+        productLine: { type: string }
+        coverType: { type: string }
+        openCoverId: { type: string }
+        clientName: { type: string }
+        clientCompany: { type: string }
+        currency: { type: string }
+        sumInsured: { type: string }
+        clientRate: { type: string }
+        insurerRate: { type: string }
+
+    CaseSummary:
+      type: object
+      required: [id, caseNumber, status, productLine, coverType, clientName, currency, clientRate, insurerRate, clientPremium, insurerPremium, brokerCommission]
+      properties:
+        id: { type: string }
+        caseNumber: { type: string }
+        status: { type: string }
+        productLine: { type: string }
+        coverType: { type: string }
+        openCoverId: { type: string }
+        clientName: { type: string }
+        currency: { type: string }
+        clientRate: { type: string }
+        insurerRate: { type: string }
+        clientPremium: { type: string }
+        insurerPremium: { type: string }
+        brokerCommission: { type: string }
+
+    CaseStatusTransitionRequest:
+      type: object
+      required: [toStatus]
+      properties:
+        toStatus: { type: string }
+        note: { type: string }
+
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error: { type: string }
+        details:
+          type: object
+          additionalProperties: true

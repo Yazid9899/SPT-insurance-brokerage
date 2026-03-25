@@ -17,3 +17,43 @@ export type FoundationReferencesResponse = {
   cargoSubProducts: string[];
   caseLifecycle: string[];
 };
+
+export type OpenCoverStatus = "ACTIVE" | "EXPIRED";
+
+export type OpenCoverListItem = {
+  id: string;
+  reference: string;
+  clientName: string;
+  clientCompany: string;
+  cargoProduct: string | null;
+  insurerName: string;
+  insurerRate: string;
+  effectiveFrom: string;
+  effectiveTo: string;
+  status: OpenCoverStatus;
+  declarationCount: number;
+};
+
+export type OpenCoverDetail = OpenCoverListItem & {
+  transportMode: string | null;
+  currency: string;
+  notes: string | null;
+};
+
+export type CaseSummary = {
+  id: string;
+  caseNumber: string;
+  status: string;
+  productLine: string;
+  coverType: string | null;
+  clientName: string;
+  clientCompany: string | null;
+  currency: string;
+  clientRate: string;
+  insurerRate: string;
+  clientPremium: string;
+  insurerPremium: string;
+  brokerCommission: string;
+  createdAt: string;
+  openCoverId: string | null;
+};
