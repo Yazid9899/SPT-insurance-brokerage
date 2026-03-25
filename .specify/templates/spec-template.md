@@ -5,6 +5,14 @@
 **Status**: Draft  
 **Input**: User description: "$ARGUMENTS"
 
+## Constitution Alignment *(mandatory)*
+
+- Keep this document technology-agnostic: describe only WHAT and WHY.
+- Do not include implementation details such as frameworks, libraries, architecture,
+  API transport design, or file/folder structure.
+- If implementation detail is required for feasibility, note it as a clarification need
+  and move final technical decisions to `plan.md`.
+
 ## User Scenarios & Testing *(mandatory)*
 
 <!--

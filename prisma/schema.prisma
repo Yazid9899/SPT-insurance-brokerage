@@ -1,0 +1,236 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum CaseStatus {
+  DRAFT
+  DOCUMENTATION
+  UNDERWRITING
+  ACTIVE
+  BILLING
+  SETTLING
+  CLOSED
+}
+
+enum ProductLine {
+  CARGO
+  PROPERTY
+  MARINE_HULL
+  UTILITY
+}
+
+enum CargoProduct {
+  CPO
+  BIODIESEL
+  SHORTENING
+}
+
+enum CoverType {
+  OPEN_COVER
+  SINGLE_SHIPMENT
+}
+
+enum TransportMode {
+  MARINE
+  TRUCKING
+}
+
+enum Currency {
+  IDR
+  USD
+  SGD
+  MYR
+}
+
+enum DocumentType {
+  POLICY_DOCUMENT
+  BILL_OF_LADING
+  COMMERCIAL_INVOICE
+  PACKING_LIST
+  CERTIFICATE_OF_INSURANCE
+  SURVEY_REPORT
+  CLAIM_FORM
+  ENDORSEMENT
+  DEBIT_NOTE
+  CREDIT_NOTE
+  OTHER
+}
+
+enum SettlementStatus {
+  DRAFT
+  CONFIRMED
+  PAID
+}
+
+model User {
+  id           String       @id @default(cuid())
+  email        String       @unique
+  name         String
+  passwordHash String
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  cases        Case[]
+  sentEmails   CaseEmail[]
+  settlements  Settlement[]
+}
+
+model OpenCover {
+  id           String      @id @default(cuid())
+  reference    String      @unique
+  clientName   String
+  clientCompany String
+  insurerName  String
+  cargoProduct CargoProduct?
+  transportMode TransportMode?
+  insurerRate  Decimal     @db.Decimal(8, 6)
+  currency     Currency
+  effectiveFrom DateTime
+  effectiveTo  DateTime
+  isActive     Boolean     @default(true)
+  notes        String?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  cases        Case[]
+
+  @@index([clientName])
+  @@index([isActive])
+}
+
+model Case {
+  id               String              @id @default(cuid())
+  caseNumber       String              @unique
+  productLine      ProductLine
+  cargoProduct     CargoProduct?
+  coverType        CoverType?
+  transportMode    TransportMode?
+  clientName       String
+  clientEmail      String?
+  clientPhone      String?
+  clientCompany    String?
+  openCoverId      String?
+  status           CaseStatus          @default(DRAFT)
+  closedAt         DateTime?
+  currency         Currency
+  sumInsured       Decimal             @db.Decimal(20, 2)
+  clientRate       Decimal             @db.Decimal(8, 6)
+  insurerRate      Decimal             @db.Decimal(8, 6)
+  clientPremium    Decimal             @db.Decimal(20, 2)
+  insurerPremium   Decimal             @db.Decimal(20, 2)
+  brokerCommission Decimal             @db.Decimal(20, 2)
+  origin           String?
+  destination      String?
+  vessel           String?
+  quantity         Decimal?            @db.Decimal(12, 2)
+  etd              DateTime?
+  eta              DateTime?
+  notes            String?
+  bulkUploadId     String?
+  createdById      String
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+  createdBy        User                @relation(fields: [createdById], references: [id])
+  openCover        OpenCover?          @relation(fields: [openCoverId], references: [id])
+  documents        CaseDocument[]
+  emails           CaseEmail[]
+  statusHistory    CaseStatusHistory[]
+  settlementItems  SettlementItem[]
+
+  @@index([status])
+  @@index([productLine])
+  @@index([cargoProduct])
+  @@index([clientName])
+  @@index([createdAt])
+  @@index([openCoverId])
+  @@index([bulkUploadId])
+}
+
+model CaseDocument {
+  id         String       @id @default(cuid())
+  caseId     String
+  name       String
+  type       DocumentType
+  fileName   String
+  filePath   String
+  fileSize   Int
+  mimeType   String
+  notes      String?
+  uploadedAt DateTime     @default(now())
+  case       Case         @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  @@index([caseId])
+  @@index([type])
+}
+
+model CaseEmail {
+  id         String   @id @default(cuid())
+  caseId     String
+  templateId String?
+  to         String
+  cc         String?
+  subject    String
+  body       String
+  sentById   String
+  sentAt     DateTime @default(now())
+  case       Case     @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  sentBy     User     @relation(fields: [sentById], references: [id])
+
+  @@index([caseId])
+}
+
+model CaseStatusHistory {
+  id        String     @id @default(cuid())
+  caseId    String
+  fromStatus CaseStatus?
+  toStatus  CaseStatus
+  changedAt DateTime   @default(now())
+  changedBy String
+  note      String?
+  case      Case       @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  @@index([caseId])
+  @@index([changedAt])
+}
+
+model Settlement {
+  id                   String           @id @default(cuid())
+  settlementNumber     String           @unique
+  insurerName          String
+  period               String
+  currency             Currency
+  totalInsurerPremium  Decimal          @db.Decimal(20, 2)
+  totalBrokerCommission Decimal         @db.Decimal(20, 2)
+  status               SettlementStatus @default(DRAFT)
+  confirmedAt          DateTime?
+  paidAt               DateTime?
+  paymentRef           String?
+  notes                String?
+  createdById          String
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+  createdBy            User             @relation(fields: [createdById], references: [id])
+  items                SettlementItem[]
+
+  @@index([status])
+  @@index([period])
+  @@index([insurerName])
+}
+
+model SettlementItem {
+  id               String     @id @default(cuid())
+  settlementId     String
+  caseId           String
+  insurerPremium   Decimal    @db.Decimal(20, 2)
+  brokerCommission Decimal    @db.Decimal(20, 2)
+  matched          Boolean    @default(false)
+  settlement       Settlement @relation(fields: [settlementId], references: [id], onDelete: Cascade)
+  case             Case       @relation(fields: [caseId], references: [id])
+
+  @@unique([settlementId, caseId])
+  @@index([settlementId])
+  @@index([caseId])
+}

@@ -31,7 +31,14 @@
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-[Gates determined based on constitution file]
+- [ ] `spec.md` contains only WHAT/WHY requirements and acceptance criteria (no stack or architecture details).
+- [ ] `plan.md` documents all HOW decisions (stack, architecture, data model, API design, file layout).
+- [ ] Financial design uses Decimal math and explicit currency codes; client rate and insurer rate are modeled separately.
+- [ ] Case number generation is server-side only with `BRK-YYYY-NNNN` format.
+- [ ] Status transitions are constrained by an explicit state machine and include history logging.
+- [ ] Multi-table writes and settlement batch transitions are transaction-safe/atomic by design.
+- [ ] Phase 1 scope excludes RBAC, multi-tenancy, and microservices unless explicitly approved as a deviation.
+- [ ] Plan includes required testing strategy for API routes, financial calculations, status transitions, and malformed XLS parsing.
 
 ## Project Structure
 

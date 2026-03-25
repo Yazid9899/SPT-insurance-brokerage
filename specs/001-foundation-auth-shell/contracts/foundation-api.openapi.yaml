@@ -1,0 +1,132 @@
+openapi: 3.0.3
+info:
+  title: CargoShield Foundation API
+  version: 0.1.0
+  description: |
+    Foundation contracts for authentication-aware app shell bootstrapping and
+    domain reference metadata in Feature 001.
+servers:
+  - url: http://localhost:3000
+paths:
+  /api/foundation/bootstrap:
+    get:
+      summary: Get app shell bootstrap payload for authenticated user
+      tags: [Foundation]
+      responses:
+        '200':
+          description: Bootstrap payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BootstrapResponse'
+        '401':
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/foundation/references:
+    get:
+      summary: Get product line and lifecycle reference metadata
+      tags: [Foundation]
+      responses:
+        '200':
+          description: Reference payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReferenceResponse'
+        '401':
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/auth/session:
+    get:
+      summary: Get current auth session
+      tags: [Auth]
+      responses:
+        '200':
+          description: Session state
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/SessionResponse'
+                  - type: 'null'
+components:
+  schemas:
+    BootstrapResponse:
+      type: object
+      required: [appName, user, navigation, defaultRoute]
+      properties:
+        appName:
+          type: string
+          example: CargoShield
+        user:
+          $ref: '#/components/schemas/UserSummary'
+        navigation:
+          type: array
+          items:
+            $ref: '#/components/schemas/NavItem'
+        defaultRoute:
+          type: string
+          example: /dashboard
+    ReferenceResponse:
+      type: object
+      required: [productLines, cargoSubProducts, caseLifecycle]
+      properties:
+        productLines:
+          type: array
+          items:
+            type: string
+            enum: [CARGO, PROPERTY, MARINE_HULL, UTILITY]
+        cargoSubProducts:
+          type: array
+          items:
+            type: string
+            enum: [CPO, BIODIESEL, SHORTENING]
+        caseLifecycle:
+          type: array
+          items:
+            type: string
+            enum: [DRAFT, DOCUMENTATION, UNDERWRITING, ACTIVE, BILLING, SETTLING, CLOSED]
+    UserSummary:
+      type: object
+      required: [name, email]
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+    NavItem:
+      type: object
+      required: [key, label, href]
+      properties:
+        key:
+          type: string
+          enum: [dashboard, cases, open-covers, settlements, reports, email-templates]
+        label:
+          type: string
+        href:
+          type: string
+    SessionResponse:
+      type: object
+      required: [user, expires]
+      properties:
+        user:
+          $ref: '#/components/schemas/UserSummary'
+        expires:
+          type: string
+          format: date-time
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+        details:
+          type: object
+          additionalProperties: true
