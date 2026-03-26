@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { CaseDocumentsTab } from "@/components/cases/case-documents-tab";
+import { CaseEmailsTab } from "@/components/cases/case-emails-tab";
 import { StatusBadge } from "@/components/shared/status-badge";
 
 const TAB_KEYS = ["Details", "Documents", "Emails", "History"] as const;
@@ -25,6 +26,7 @@ type CaseDetailData = {
   cargoProduct: string | null;
   coverType: string | null;
   clientName: string;
+  clientEmail: string | null;
   currency: string;
   sumInsured: string;
   clientRate: string;
@@ -40,7 +42,15 @@ type CaseDetailData = {
   eta: string | null;
   notes: string | null;
   openCoverId: string | null;
+  openCoverReference: string | null;
+  insurerName: string | null;
   documentsApiUrl: string;
+  settlementData?: {
+    settlementNumber: string | null;
+    settlementPeriod: string | null;
+    totalInsurerPremium: string | null;
+    caseCount: string | null;
+  };
   statusHistory: HistoryItem[];
 };
 
@@ -142,7 +152,10 @@ export function CaseDetail({ data }: { data: CaseDetailData }) {
         </div>
         {data.openCoverId ? (
           <p className="mt-2 text-sm">
-            Open Cover: <a href={`/open-covers/${data.openCoverId}`} className="text-blue-600 underline">{data.openCoverId}</a>
+            Open Cover:{" "}
+            <a href={`/open-covers/${data.openCoverId}`} className="text-blue-600 underline">
+              {data.openCoverReference ?? data.openCoverId}
+            </a>
           </p>
         ) : null}
 
@@ -196,7 +209,38 @@ export function CaseDetail({ data }: { data: CaseDetailData }) {
         ) : null}
 
         {tab === "Documents" ? <CaseDocumentsTab caseId={data.id} status={status} endpoint={data.documentsApiUrl} /> : null}
-        {tab === "Emails" ? <p className="text-sm text-slate-600">Emails tab placeholder.</p> : null}
+        {tab === "Emails" ? (
+          <CaseEmailsTab
+            caseId={data.id}
+            clientEmail={data.clientEmail}
+            caseData={{
+              caseNumber: data.caseNumber,
+              status,
+              clientName: data.clientName,
+              clientEmail: data.clientEmail,
+              productLine: data.productLine,
+              cargoProduct: data.cargoProduct,
+              coverType: data.coverType,
+              transportMode: null,
+              openCoverReference: data.openCoverReference,
+              insurerName: data.insurerName,
+              currency: data.currency,
+              sumInsured: data.sumInsured,
+              clientRate: data.clientRate,
+              insurerRate: data.insurerRate,
+              clientPremium: data.clientPremium,
+              insurerPremium: data.insurerPremium,
+              brokerCommission: data.brokerCommission,
+              origin: data.origin,
+              destination: data.destination,
+              vessel: data.vessel,
+              quantity: data.quantity,
+              etd: data.etd,
+              eta: data.eta,
+            }}
+            settlementData={data.settlementData}
+          />
+        ) : null}
         {tab === "History" ? (
           <div className="space-y-2 text-sm">
             {history.length === 0 ? <p className="text-slate-600">No transitions logged yet.</p> : null}

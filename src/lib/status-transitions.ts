@@ -10,9 +10,9 @@ type TransitionValidationInput = {
     coverType: string | null;
     origin: string | null;
     destination: string | null;
-    sumInsured: { gt: (x: number) => boolean } | number;
-    clientRate: { gt: (x: number) => boolean; gte: (x: unknown) => boolean } | number;
-    insurerRate: { gt: (x: number) => boolean } | number;
+    sumInsured: unknown;
+    clientRate: unknown;
+    insurerRate: unknown;
   };
   documentCount?: number;
   note?: string | null;
@@ -43,12 +43,32 @@ export function isBackwardTransition(fromStatus: CaseStatus, toStatus: CaseStatu
   return (fromStatus === "DOCUMENTATION" && toStatus === "DRAFT") || (fromStatus === "UNDERWRITING" && toStatus === "DOCUMENTATION");
 }
 
-function gtZero(value: { gt: (x: number) => boolean } | number): boolean {
-  return typeof value === "number" ? value > 0 : value.gt(0);
+function hasGt(value: unknown): value is { gt: (x: number) => boolean } {
+  return typeof value === "object" && value !== null && "gt" in value && typeof value.gt === "function";
 }
 
-function gte(left: { gte: (x: unknown) => boolean } | number, right: unknown): boolean {
-  return typeof left === "number" ? left >= Number(right) : left.gte(right);
+function hasGte(value: unknown): value is { gte: (x: number | string) => boolean } {
+  return typeof value === "object" && value !== null && "gte" in value && typeof value.gte === "function";
+}
+
+function gtZero(value: unknown): boolean {
+  if (typeof value === "number") {
+    return value > 0;
+  }
+  if (hasGt(value)) {
+    return value.gt(0);
+  }
+  return Number(value) > 0;
+}
+
+function gte(left: unknown, right: unknown): boolean {
+  if (typeof left === "number") {
+    return left >= Number(right);
+  }
+  if (hasGte(left)) {
+    return left.gte(String(right));
+  }
+  return Number(left) >= Number(right);
 }
 
 export function validateTransitionInput(input: TransitionValidationInput): string | null {

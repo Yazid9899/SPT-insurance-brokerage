@@ -1,0 +1,195 @@
+openapi: 3.0.3
+info:
+  title: Email Template and Case Email API
+  version: 1.0.0
+  description: Contracts for template listing/preview and case email logging/history.
+servers:
+  - url: /api
+paths:
+  /email-templates:
+    get:
+      summary: List predefined email templates
+      responses:
+        '200':
+          description: Template catalog
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/EmailTemplate'
+        '401':
+          $ref: '#/components/responses/ErrorResponse'
+  /email-templates/preview:
+    post:
+      summary: Render template preview using provided variables
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [templateId, vars]
+              properties:
+                templateId:
+                  type: string
+                vars:
+                  type: object
+                  additionalProperties:
+                    type: string
+      responses:
+        '200':
+          description: Rendered template preview
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [subject, body]
+                properties:
+                  subject:
+                    type: string
+                  body:
+                    type: string
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/ErrorResponse'
+  /cases/{id}/emails:
+    get:
+      summary: List logged emails for a case
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Case email history
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CaseEmailItem'
+        '401':
+          $ref: '#/components/responses/ErrorResponse'
+        '404':
+          $ref: '#/components/responses/ErrorResponse'
+    post:
+      summary: Log composed case email (sending disabled in Phase 1)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [templateId, to, subject, body]
+              properties:
+                templateId:
+                  type: string
+                to:
+                  type: string
+                  format: email
+                cc:
+                  type: string
+                subject:
+                  type: string
+                  minLength: 1
+                body:
+                  type: string
+                  minLength: 1
+      responses:
+        '201':
+          description: Email logged
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [message, item]
+                properties:
+                  message:
+                    type: string
+                    example: Email logged (sending disabled in dev mode).
+                  item:
+                    $ref: '#/components/schemas/CaseEmailItem'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/ErrorResponse'
+        '404':
+          $ref: '#/components/responses/ErrorResponse'
+components:
+  responses:
+    ErrorResponse:
+      description: Consistent error shape
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [error]
+            properties:
+              error:
+                type: string
+              details:
+                type: object
+                additionalProperties: true
+  schemas:
+    EmailTemplate:
+      type: object
+      required: [templateId, name, description, subjectTemplate, bodyTemplate, variables]
+      properties:
+        templateId:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        subjectTemplate:
+          type: string
+        bodyTemplate:
+          type: string
+        variables:
+          type: array
+          items:
+            type: string
+    CaseEmailItem:
+      type: object
+      required: [id, caseId, templateId, to, subject, body, sentAt]
+      properties:
+        id:
+          type: string
+        caseId:
+          type: string
+        templateId:
+          type: string
+          nullable: true
+        to:
+          type: string
+        cc:
+          type: string
+          nullable: true
+        subject:
+          type: string
+        body:
+          type: string
+        sentAt:
+          type: string
+          format: date-time
+        templateName:
+          type: string
+          nullable: true

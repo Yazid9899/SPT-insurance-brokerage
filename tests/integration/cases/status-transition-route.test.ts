@@ -1,7 +1,7 @@
 ﻿import { describe, expect, it } from "vitest";
 
 import { caseStatusTransitionSchema } from "@/lib/validations";
-import { validateTransitionInput } from "@/lib/status-transitions";
+import { STATUS_TRANSITIONS, validateTransitionInput } from "@/lib/status-transitions";
 
 describe("POST /api/cases/[id]/status transition route", () => {
   it("accepts valid transition payload", () => {
@@ -28,5 +28,11 @@ describe("POST /api/cases/[id]/status transition route", () => {
     });
 
     expect(error).toContain("note");
+  });
+
+  it("preserves lifecycle transition map for core statuses", () => {
+    expect(STATUS_TRANSITIONS.DRAFT).toEqual(["DOCUMENTATION"]);
+    expect(STATUS_TRANSITIONS.ACTIVE).toEqual(["BILLING"]);
+    expect(STATUS_TRANSITIONS.CLOSED).toEqual([]);
   });
 });

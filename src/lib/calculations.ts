@@ -1,9 +1,9 @@
 import Decimal from "decimal.js";
 
 export type PremiumCalculationInput = {
-  sumInsured: string | number;
-  clientRate: string | number;
-  insurerRate: string | number;
+  sumInsured: Decimal.Value;
+  clientRate: Decimal.Value;
+  insurerRate: Decimal.Value;
 };
 
 export type PremiumCalculationResult = {

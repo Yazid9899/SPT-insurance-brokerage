@@ -14,7 +14,8 @@ import { caseUpsertSchema } from "@/lib/validations";
 
 const formSchema = caseUpsertSchema;
 
-type FormValues = z.infer<typeof caseUpsertSchema>;
+type FormInput = z.input<typeof caseUpsertSchema>;
+type FormValues = z.output<typeof caseUpsertSchema>;
 
 type OpenCoverOption = {
   id: string;
@@ -55,14 +56,14 @@ export function CaseForm({
 }: {
   mode?: "create" | "edit";
   caseId?: string;
-  initialValues?: Partial<FormValues>;
+  initialValues?: Partial<FormInput>;
 }) {
   const router = useRouter();
   const [openCoverOptions, setOpenCoverOptions] = useState<OpenCoverOption[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const form = useForm<FormValues>({
+  const form = useForm<FormInput, undefined, FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       ...defaultValues,
@@ -73,9 +74,9 @@ export function CaseForm({
   const productLine = form.watch("productLine");
   const coverType = form.watch("coverType");
   const selectedOpenCoverId = form.watch("openCoverId");
-  const sumInsured = form.watch("sumInsured");
-  const clientRate = form.watch("clientRate");
-  const insurerRate = form.watch("insurerRate");
+  const sumInsured = Number(form.watch("sumInsured") ?? 0);
+  const clientRate = Number(form.watch("clientRate") ?? 0);
+  const insurerRate = Number(form.watch("insurerRate") ?? 0);
 
   const selectedOpenCover = useMemo(
     () => openCoverOptions.find((item) => item.id === selectedOpenCoverId) ?? null,

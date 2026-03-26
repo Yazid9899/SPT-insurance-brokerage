@@ -151,6 +151,19 @@ export const documentUploadMetaSchema = z.object({
   note: z.string().max(2000).optional(),
 });
 
+export const emailTemplatePreviewSchema = z.object({
+  templateId: z.string().min(1),
+  vars: z.record(z.string(), z.string()),
+});
+
+export const caseEmailCreateSchema = z.object({
+  templateId: z.string().min(1),
+  to: z.string().email(),
+  cc: z.string().optional().nullable(),
+  subject: z.string().trim().min(1),
+  body: z.string().trim().min(1),
+});
+
 const ALLOWED_MIME_SET = new Set(DOCUMENT_ALLOWED_MIME_TYPES);
 const ALLOWED_EXT_SET = new Set(DOCUMENT_ALLOWED_EXTENSIONS);
 

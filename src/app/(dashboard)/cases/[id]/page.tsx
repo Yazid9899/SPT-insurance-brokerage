@@ -8,12 +8,22 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
   const { id } = await params;
   const found = await prisma.case.findFirst({
     where: { id, deletedAt: null },
-    include: { statusHistory: { orderBy: { changedAt: "desc" } } },
+    include: {
+      openCover: { select: { reference: true, insurerName: true } },
+      settlementItems: {
+        include: { settlement: true },
+        orderBy: { settlement: { createdAt: "desc" } },
+        take: 1,
+      },
+      statusHistory: { orderBy: { changedAt: "desc" } },
+    },
   });
 
   if (!found) {
     notFound();
   }
+
+  const latestSettlement = found.settlementItems[0]?.settlement;
 
   return (
     <div className="space-y-4">
@@ -27,6 +37,7 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
           cargoProduct: found.cargoProduct,
           coverType: found.coverType,
           clientName: found.clientName,
+          clientEmail: found.clientEmail,
           currency: found.currency,
           sumInsured: found.sumInsured.toFixed(2),
           clientRate: found.clientRate.toFixed(6),
@@ -42,7 +53,17 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
           eta: found.eta?.toISOString() ?? null,
           notes: found.notes,
           openCoverId: found.openCoverId,
+          openCoverReference: found.openCover?.reference ?? null,
+          insurerName: found.openCover?.insurerName ?? null,
           documentsApiUrl: `/api/cases/${found.id}/documents`,
+          settlementData: latestSettlement
+            ? {
+                settlementNumber: latestSettlement.settlementNumber,
+                settlementPeriod: latestSettlement.period,
+                totalInsurerPremium: latestSettlement.totalInsurerPremium.toFixed(2),
+                caseCount: null,
+              }
+            : undefined,
           statusHistory: found.statusHistory.map((h) => ({
             fromStatus: h.fromStatus,
             toStatus: h.toStatus,

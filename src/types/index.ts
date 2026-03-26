@@ -71,3 +71,24 @@ export type CaseDocumentItem = {
   bulkUploadId: string | null;
   downloadUrl: string;
 };
+
+export type EmailTemplateItem = {
+  templateId: string;
+  name: string;
+  description: string;
+  subjectTemplate: string;
+  bodyTemplate: string;
+  variables: string[];
+};
+
+export type CaseEmailItem = {
+  id: string;
+  caseId: string;
+  templateId: string | null;
+  templateName: string | null;
+  to: string;
+  cc: string | null;
+  subject: string;
+  body: string;
+  sentAt: string;
+};
