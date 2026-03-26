@@ -57,3 +57,17 @@ export type CaseSummary = {
   createdAt: string;
   openCoverId: string | null;
 };
+
+export type CaseDocumentItem = {
+  id: string;
+  caseId: string;
+  name: string;
+  type: string;
+  mimeType: string;
+  fileSize: number;
+  note: string | null;
+  uploadedAt: string;
+  isShared: boolean;
+  bulkUploadId: string | null;
+  downloadUrl: string;
+};

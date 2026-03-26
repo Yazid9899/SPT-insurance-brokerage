@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
+import { CaseDocumentsTab } from "@/components/cases/case-documents-tab";
 import { StatusBadge } from "@/components/shared/status-badge";
 
 const TAB_KEYS = ["Details", "Documents", "Emails", "History"] as const;
@@ -39,6 +40,7 @@ type CaseDetailData = {
   eta: string | null;
   notes: string | null;
   openCoverId: string | null;
+  documentsApiUrl: string;
   statusHistory: HistoryItem[];
 };
 
@@ -193,7 +195,7 @@ export function CaseDetail({ data }: { data: CaseDetailData }) {
           </div>
         ) : null}
 
-        {tab === "Documents" ? <p className="text-sm text-slate-600">Documents tab placeholder.</p> : null}
+        {tab === "Documents" ? <CaseDocumentsTab caseId={data.id} status={status} endpoint={data.documentsApiUrl} /> : null}
         {tab === "Emails" ? <p className="text-sm text-slate-600">Emails tab placeholder.</p> : null}
         {tab === "History" ? (
           <div className="space-y-2 text-sm">

@@ -152,20 +152,24 @@ model Case {
 }
 
 model CaseDocument {
-  id         String       @id @default(cuid())
-  caseId     String
-  name       String
-  type       DocumentType
-  fileName   String
-  filePath   String
-  fileSize   Int
-  mimeType   String
-  notes      String?
-  uploadedAt DateTime     @default(now())
-  case       Case         @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  id                String       @id @default(cuid())
+  caseId            String
+  name              String
+  type              DocumentType
+  fileName          String
+  filePath          String
+  fileSize          Int
+  mimeType          String
+  notes             String?
+  bulkUploadId      String?
+  sharedDocumentKey String?
+  uploadedAt        DateTime     @default(now())
+  case              Case         @relation(fields: [caseId], references: [id], onDelete: Cascade)
 
   @@index([caseId])
   @@index([type])
+  @@index([bulkUploadId])
+  @@index([sharedDocumentKey])
 }
 
 model CaseEmail {

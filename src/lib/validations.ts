@@ -5,6 +5,10 @@ import {
   CASE_LIFECYCLE,
   COVER_TYPES,
   CURRENCIES,
+  DOCUMENT_ALLOWED_EXTENSIONS,
+  DOCUMENT_ALLOWED_MIME_TYPES,
+  DOCUMENT_TYPES,
+  MAX_DOCUMENT_SIZE_BYTES,
   PRODUCT_LINES,
   TRANSPORT_MODES,
 } from "@/lib/constants";
@@ -139,3 +143,38 @@ export const openCoverListFilterSchema = z.object({
   status: z.enum(["ACTIVE", "EXPIRED", "ALL"]).optional(),
   activeOnly: z.enum(["true", "false"]).optional(),
 });
+
+export const documentTypeSchema = z.enum(DOCUMENT_TYPES);
+
+export const documentUploadMetaSchema = z.object({
+  documentType: documentTypeSchema,
+  note: z.string().max(2000).optional(),
+});
+
+const ALLOWED_MIME_SET = new Set(DOCUMENT_ALLOWED_MIME_TYPES);
+const ALLOWED_EXT_SET = new Set(DOCUMENT_ALLOWED_EXTENSIONS);
+
+function getExtension(name: string) {
+  const idx = name.lastIndexOf(".");
+  if (idx < 0) {
+    return "";
+  }
+  return name.slice(idx).toLowerCase();
+}
+
+export function validateDocumentFile(file: File) {
+  const ext = getExtension(file.name);
+  if (!ALLOWED_EXT_SET.has(ext as (typeof DOCUMENT_ALLOWED_EXTENSIONS)[number])) {
+    return `Unsupported file extension: ${ext || "(none)"}`;
+  }
+
+  if (!ALLOWED_MIME_SET.has(file.type as (typeof DOCUMENT_ALLOWED_MIME_TYPES)[number])) {
+    return `Unsupported file type: ${file.type || "(unknown)"}`;
+  }
+
+  if (file.size > MAX_DOCUMENT_SIZE_BYTES) {
+    return `File exceeds max size of ${MAX_DOCUMENT_SIZE_BYTES} bytes`;
+  }
+
+  return null;
+}

@@ -42,6 +42,7 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
           eta: found.eta?.toISOString() ?? null,
           notes: found.notes,
           openCoverId: found.openCoverId,
+          documentsApiUrl: `/api/cases/${found.id}/documents`,
           statusHistory: found.statusHistory.map((h) => ({
             fromStatus: h.fromStatus,
             toStatus: h.toStatus,
