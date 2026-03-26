@@ -200,6 +200,68 @@ export const settlementPaySchema = z.object({
   note: z.string().max(1000).optional().nullable(),
 });
 
+const reportDateString = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Expected date format YYYY-MM-DD");
+const reportSortFields = [
+  "caseNumber",
+  "clientName",
+  "productLine",
+  "cargoProduct",
+  "coverType",
+  "status",
+  "currency",
+  "sumInsured",
+  "clientRate",
+  "insurerRate",
+  "clientPremium",
+  "insurerPremium",
+  "brokerCommission",
+  "origin",
+  "destination",
+  "vessel",
+  "quantity",
+  "etd",
+  "eta",
+  "openCoverRef",
+  "createdAt",
+  "closedAt",
+] as const;
+
+export const reportQuerySchema = z
+  .object({
+    dateFrom: reportDateString.optional(),
+    dateTo: reportDateString.optional(),
+    status: z
+      .preprocess((value) => (typeof value === "string" ? value.split(",").map((v) => v.trim()).filter(Boolean) : value), z.array(z.enum(CASE_LIFECYCLE)).optional())
+      .optional(),
+    productLine: z
+      .preprocess((value) => (typeof value === "string" ? value.split(",").map((v) => v.trim()).filter(Boolean) : value), z.array(z.enum(PRODUCT_LINES)).optional())
+      .optional(),
+    cargoProduct: z
+      .preprocess((value) => (typeof value === "string" ? value.split(",").map((v) => v.trim()).filter(Boolean) : value), z.array(z.enum(CARGO_SUB_PRODUCTS)).optional())
+      .optional(),
+    coverType: z
+      .preprocess((value) => (typeof value === "string" ? value.split(",").map((v) => v.trim()).filter(Boolean) : value), z.array(z.enum(COVER_TYPES)).optional())
+      .optional(),
+    search: z.string().optional(),
+    sortBy: z.enum(reportSortFields).default("createdAt"),
+    sortDirection: z.enum(["asc", "desc"]).default("desc"),
+    page: z.coerce.number().int().min(1).default(1),
+    pageSize: z.coerce.number().int().min(1).max(200).default(20),
+  })
+  .superRefine((value, ctx) => {
+    if (value.dateFrom && value.dateTo) {
+      const from = new Date(`${value.dateFrom}T00:00:00.000Z`);
+      const to = new Date(`${value.dateTo}T00:00:00.000Z`);
+      if (from > to) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["dateFrom"],
+          message: "dateFrom must be before or equal to dateTo",
+        });
+      }
+    }
+  });
+
 export const bulkUploadTempDocumentSchema = z.object({
   draftId: z.string().min(1),
 });

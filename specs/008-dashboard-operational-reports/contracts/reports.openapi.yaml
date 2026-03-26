@@ -1,0 +1,432 @@
+openapi: 3.0.3
+info:
+  title: CargoShield Reports API
+  version: 1.0.0
+  description: Contracts for dashboard and operational reporting endpoints.
+servers:
+  - url: /api
+paths:
+  /reports/summary:
+    get:
+      summary: Get dashboard and period summary metrics
+      parameters:
+        - in: query
+          name: dateFrom
+          schema:
+            type: string
+            format: date
+          description: Inclusive start date for reports context.
+        - in: query
+          name: dateTo
+          schema:
+            type: string
+            format: date
+          description: Inclusive end date for reports context.
+        - in: query
+          name: status
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/CaseStatus'
+          style: form
+          explode: true
+        - in: query
+          name: productLine
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/ProductLine'
+          style: form
+          explode: true
+        - in: query
+          name: cargoProduct
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/CargoProduct'
+          style: form
+          explode: true
+        - in: query
+          name: coverType
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/CoverType'
+          style: form
+          explode: true
+      responses:
+        '200':
+          description: Summary payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportsSummaryResponse'
+        '400':
+          description: Invalid query
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /reports/cases:
+    get:
+      summary: Get filtered report case rows (paginated)
+      parameters:
+        - $ref: '#/components/parameters/dateFrom'
+        - $ref: '#/components/parameters/dateTo'
+        - $ref: '#/components/parameters/status'
+        - $ref: '#/components/parameters/productLine'
+        - $ref: '#/components/parameters/cargoProduct'
+        - $ref: '#/components/parameters/coverType'
+        - in: query
+          name: search
+          schema:
+            type: string
+          description: Case number or client name keyword.
+        - in: query
+          name: sortBy
+          schema:
+            type: string
+            enum: [caseNumber, clientName, productLine, cargoProduct, coverType, status, currency, sumInsured, clientRate, insurerRate, clientPremium, insurerPremium, brokerCommission, origin, destination, vessel, quantity, etd, eta, openCoverRef, createdAt, closedAt]
+        - in: query
+          name: sortDirection
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - in: query
+          name: pageSize
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 20
+      responses:
+        '200':
+          description: Paginated case rows
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportCasesResponse'
+        '400':
+          description: Invalid query
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /reports/commission:
+    get:
+      summary: Get commission breakdown by insurer and monthly trend
+      parameters:
+        - $ref: '#/components/parameters/dateFrom'
+        - $ref: '#/components/parameters/dateTo'
+        - $ref: '#/components/parameters/status'
+        - $ref: '#/components/parameters/productLine'
+        - $ref: '#/components/parameters/cargoProduct'
+        - $ref: '#/components/parameters/coverType'
+      responses:
+        '200':
+          description: Commission analytics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommissionResponse'
+        '400':
+          description: Invalid query
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /reports/export:
+    get:
+      summary: Export filtered cases as CSV
+      parameters:
+        - $ref: '#/components/parameters/dateFrom'
+        - $ref: '#/components/parameters/dateTo'
+        - $ref: '#/components/parameters/status'
+        - $ref: '#/components/parameters/productLine'
+        - $ref: '#/components/parameters/cargoProduct'
+        - $ref: '#/components/parameters/coverType'
+        - in: query
+          name: search
+          schema:
+            type: string
+        - in: query
+          name: sortBy
+          schema:
+            type: string
+        - in: query
+          name: sortDirection
+          schema:
+            type: string
+            enum: [asc, desc]
+      responses:
+        '200':
+          description: CSV file stream
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+        '400':
+          description: Invalid query
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+components:
+  parameters:
+    dateFrom:
+      in: query
+      name: dateFrom
+      schema:
+        type: string
+        format: date
+      required: true
+      description: Inclusive start date (YYYY-MM-DD).
+    dateTo:
+      in: query
+      name: dateTo
+      schema:
+        type: string
+        format: date
+      required: true
+      description: Inclusive end date (YYYY-MM-DD).
+    status:
+      in: query
+      name: status
+      schema:
+        type: array
+        items:
+          $ref: '#/components/schemas/CaseStatus'
+      style: form
+      explode: true
+    productLine:
+      in: query
+      name: productLine
+      schema:
+        type: array
+        items:
+          $ref: '#/components/schemas/ProductLine'
+      style: form
+      explode: true
+    cargoProduct:
+      in: query
+      name: cargoProduct
+      schema:
+        type: array
+        items:
+          $ref: '#/components/schemas/CargoProduct'
+      style: form
+      explode: true
+    coverType:
+      in: query
+      name: coverType
+      schema:
+        type: array
+        items:
+          $ref: '#/components/schemas/CoverType'
+      style: form
+      explode: true
+  schemas:
+    ReportsSummaryResponse:
+      type: object
+      required: [dashboard, reports]
+      properties:
+        dashboard:
+          type: object
+          required: [totalCases, activeCases, pendingBillingCount, totalExposureUsd, monthlyCommission, unsettledAmount, excludedCurrencyCount, statusDistribution, productDistribution, recentCases]
+          properties:
+            totalCases: { type: integer }
+            activeCases: { type: integer }
+            pendingBillingCount: { type: integer }
+            totalExposureUsd: { type: string }
+            monthlyCommission: { type: string }
+            unsettledAmount: { type: string }
+            excludedCurrencyCount: { type: integer }
+            statusDistribution:
+              type: array
+              items:
+                $ref: '#/components/schemas/StatusDistributionEntry'
+            productDistribution:
+              type: array
+              items:
+                $ref: '#/components/schemas/ProductDistributionEntry'
+            monthlyCommissionTrend:
+              type: array
+              items:
+                $ref: '#/components/schemas/MonthlyValueEntry'
+            recentCases:
+              type: array
+              items:
+                $ref: '#/components/schemas/RecentCase'
+        reports:
+          type: object
+          required: [totalCases, totalSumInsured, totalClientPremium, totalInsurerPremium, totalBrokerCommission, monthlyCaseVolume]
+          properties:
+            totalCases: { type: integer }
+            totalSumInsured: { type: string }
+            totalClientPremium: { type: string }
+            totalInsurerPremium: { type: string }
+            totalBrokerCommission: { type: string }
+            monthlyCaseVolume:
+              type: array
+              items:
+                $ref: '#/components/schemas/MonthlyValueEntry'
+    ReportCasesResponse:
+      type: object
+      required: [items, pagination]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReportCaseRow'
+        pagination:
+          type: object
+          required: [page, pageSize, totalItems, totalPages]
+          properties:
+            page: { type: integer }
+            pageSize: { type: integer }
+            totalItems: { type: integer }
+            totalPages: { type: integer }
+    CommissionResponse:
+      type: object
+      required: [byInsurer, monthlyCommission]
+      properties:
+        byInsurer:
+          type: array
+          items:
+            $ref: '#/components/schemas/InsurerCommissionEntry'
+        monthlyCommission:
+          type: array
+          items:
+            $ref: '#/components/schemas/MonthlyValueEntry'
+    StatusDistributionEntry:
+      type: object
+      required: [status, count]
+      properties:
+        status:
+          $ref: '#/components/schemas/CaseStatus'
+        count:
+          type: integer
+    ProductDistributionEntry:
+      type: object
+      required: [productLine, count]
+      properties:
+        productLine:
+          $ref: '#/components/schemas/ProductLine'
+        cargoProduct:
+          allOf:
+            - $ref: '#/components/schemas/CargoProduct'
+          nullable: true
+        count:
+          type: integer
+    MonthlyValueEntry:
+      type: object
+      required: [month, value]
+      properties:
+        month:
+          type: string
+          pattern: '^\\d{4}-\\d{2}$'
+        value:
+          type: string
+    RecentCase:
+      type: object
+      required: [id, caseNumber, clientName, productLine, status, createdAt]
+      properties:
+        id: { type: string }
+        caseNumber: { type: string }
+        clientName: { type: string }
+        productLine:
+          $ref: '#/components/schemas/ProductLine'
+        status:
+          $ref: '#/components/schemas/CaseStatus'
+        createdAt:
+          type: string
+          format: date-time
+    InsurerCommissionEntry:
+      type: object
+      required: [insurerName, totalBrokerCommission, caseCount]
+      properties:
+        insurerName:
+          type: string
+        totalBrokerCommission:
+          type: string
+        caseCount:
+          type: integer
+    ReportCaseRow:
+      type: object
+      required:
+        - caseNumber
+        - clientName
+        - productLine
+        - status
+        - currency
+        - sumInsured
+        - clientRate
+        - insurerRate
+        - clientPremium
+        - insurerPremium
+        - brokerCommission
+        - createdAt
+      properties:
+        caseNumber: { type: string }
+        clientName: { type: string }
+        productLine:
+          $ref: '#/components/schemas/ProductLine'
+        cargoProduct:
+          allOf:
+            - $ref: '#/components/schemas/CargoProduct'
+          nullable: true
+        coverType:
+          allOf:
+            - $ref: '#/components/schemas/CoverType'
+          nullable: true
+        status:
+          $ref: '#/components/schemas/CaseStatus'
+        currency:
+          $ref: '#/components/schemas/Currency'
+        sumInsured: { type: string }
+        clientRate: { type: string }
+        insurerRate: { type: string }
+        clientPremium: { type: string }
+        insurerPremium: { type: string }
+        brokerCommission: { type: string }
+        origin: { type: string, nullable: true }
+        destination: { type: string, nullable: true }
+        vessel: { type: string, nullable: true }
+        quantity: { type: string, nullable: true }
+        etd: { type: string, format: date-time, nullable: true }
+        eta: { type: string, format: date-time, nullable: true }
+        openCoverRef: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+        closedAt: { type: string, format: date-time, nullable: true }
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+        details:
+          type: object
+          additionalProperties: true
+    CaseStatus:
+      type: string
+      enum: [DRAFT, DOCUMENTATION, UNDERWRITING, ACTIVE, BILLING, SETTLING, CLOSED]
+    ProductLine:
+      type: string
+      enum: [CARGO, PROPERTY, MARINE_HULL, UTILITY]
+    CargoProduct:
+      type: string
+      enum: [CPO, BIODIESEL, SHORTENING]
+    CoverType:
+      type: string
+      enum: [OPEN_COVER, SINGLE_SHIPMENT]
+    Currency:
+      type: string
+      enum: [IDR, USD, SGD, MYR]

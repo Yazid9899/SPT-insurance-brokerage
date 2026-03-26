@@ -162,3 +162,66 @@ export type SettlementDetail = {
   caseCount: number;
   items: SettlementItem[];
 };
+
+export type ReportsDashboardSummary = {
+  totalCases: number;
+  activeCases: number;
+  pendingBillingCount: number;
+  totalExposureUsd: string;
+  monthlyCommission: string;
+  unsettledAmount: string;
+  excludedCurrencyCount: number;
+  statusDistribution: Array<{ status: string; count: number }>;
+  productDistribution: Array<{ productLine: string; cargoProduct: string | null; count: number }>;
+  monthlyCommissionTrend: Array<{ month: string; value: string }>;
+  recentCases: Array<{ id: string; caseNumber: string; clientName: string; productLine: string; status: string; createdAt: string }>;
+};
+
+export type ReportsSummaryMetrics = {
+  totalCases: number;
+  totalSumInsured: string;
+  totalClientPremium: string;
+  totalInsurerPremium: string;
+  totalBrokerCommission: string;
+  monthlyCaseVolume: Array<{ month: string; value: string }>;
+};
+
+export type ReportsCaseRow = {
+  caseNumber: string;
+  clientName: string;
+  productLine: string;
+  cargoProduct: string | null;
+  coverType: string | null;
+  status: string;
+  currency: string;
+  sumInsured: string;
+  clientRate: string;
+  insurerRate: string;
+  clientPremium: string;
+  insurerPremium: string;
+  brokerCommission: string;
+  origin: string | null;
+  destination: string | null;
+  vessel: string | null;
+  quantity: string | null;
+  etd: string | null;
+  eta: string | null;
+  openCoverRef: string | null;
+  createdAt: string;
+  closedAt: string | null;
+};
+
+export type ReportsCasesResponse = {
+  items: ReportsCaseRow[];
+  pagination: {
+    page: number;
+    pageSize: number;
+    totalItems: number;
+    totalPages: number;
+  };
+};
+
+export type ReportsCommissionResponse = {
+  byInsurer: Array<{ insurerName: string; totalBrokerCommission: string; caseCount: number }>;
+  monthlyCommission: Array<{ month: string; value: string }>;
+};

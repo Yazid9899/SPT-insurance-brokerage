@@ -1,4 +1,5 @@
 import Decimal from "decimal.js";
+import type { Currency } from "@prisma/client";
 
 export type PremiumCalculationInput = {
   sumInsured: Decimal.Value;
@@ -10,6 +11,13 @@ export type PremiumCalculationResult = {
   clientPremium: string;
   insurerPremium: string;
   brokerCommission: string;
+};
+
+const USD_CONVERSION_RATES: Record<Currency, Decimal> = {
+  USD: new Decimal(1),
+  IDR: new Decimal(16000),
+  SGD: new Decimal(1.35),
+  MYR: new Decimal(4.7),
 };
 
 export function calculatePremiums(input: PremiumCalculationInput): PremiumCalculationResult {
@@ -27,4 +35,13 @@ export function calculatePremiums(input: PremiumCalculationInput): PremiumCalcul
     insurerPremium: insurerPremium.toFixed(2),
     brokerCommission: brokerCommission.toFixed(2),
   };
+}
+
+export function convertToUsdExposure(input: { amount: Decimal.Value; currency: Currency }) {
+  const rate = USD_CONVERSION_RATES[input.currency];
+  if (!rate) {
+    return null;
+  }
+  const amount = new Decimal(input.amount);
+  return amount.div(rate);
 }
