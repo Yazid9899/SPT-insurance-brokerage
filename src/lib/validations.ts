@@ -1,6 +1,13 @@
-import { z } from "zod";
+﻿import { z } from "zod";
 
-import { CARGO_SUB_PRODUCTS, CASE_LIFECYCLE, COVER_TYPES, CURRENCIES, PRODUCT_LINES, TRANSPORT_MODES } from "@/lib/constants";
+import {
+  CARGO_SUB_PRODUCTS,
+  CASE_LIFECYCLE,
+  COVER_TYPES,
+  CURRENCIES,
+  PRODUCT_LINES,
+  TRANSPORT_MODES,
+} from "@/lib/constants";
 
 export const loginSchema = z.object({
   email: z.string().email(),
@@ -40,34 +47,89 @@ export const openCoverUpsertSchema = z
     }
   });
 
-export const caseUpsertSchema = z.object({
-  productLine: z.enum(PRODUCT_LINES),
-  cargoProduct: z.enum(CARGO_SUB_PRODUCTS).optional().nullable(),
-  coverType: z.enum(COVER_TYPES).optional().nullable(),
-  transportMode: z.enum(TRANSPORT_MODES).optional().nullable(),
-  openCoverId: z.string().cuid().optional().nullable(),
-  clientName: z.string().min(1),
-  clientCompany: z.string().optional().nullable(),
-  currency: z.enum(CURRENCIES),
-  sumInsured: positiveAmount,
-  clientRate: decimalRate,
-  insurerRate: decimalRate,
-  notes: z.string().max(2000).optional().nullable(),
-});
+export const caseUpsertSchema = z
+  .object({
+    productLine: z.enum(PRODUCT_LINES),
+    cargoProduct: z.enum(CARGO_SUB_PRODUCTS).optional().nullable(),
+    coverType: z.enum(COVER_TYPES).optional().nullable(),
+    transportMode: z.enum(TRANSPORT_MODES).optional().nullable(),
+    openCoverId: z.string().cuid().optional().nullable(),
+    clientName: z.string().min(1),
+    clientEmail: z.string().email().optional().nullable(),
+    clientPhone: z.string().optional().nullable(),
+    clientCompany: z.string().optional().nullable(),
+    currency: z.enum(CURRENCIES),
+    sumInsured: positiveAmount,
+    clientRate: decimalRate,
+    insurerRate: decimalRate,
+    origin: z.string().optional().nullable(),
+    destination: z.string().optional().nullable(),
+    vessel: z.string().optional().nullable(),
+    quantity: z.coerce.number().positive().optional().nullable(),
+    etd: z.coerce.date().optional().nullable(),
+    eta: z.coerce.date().optional().nullable(),
+    notes: z.string().max(2000).optional().nullable(),
+  })
+  .superRefine((value, ctx) => {
+    if (value.productLine === "CARGO") {
+      if (!value.cargoProduct) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["cargoProduct"], message: "cargoProduct is required for CARGO" });
+      }
+      if (!value.coverType) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["coverType"], message: "coverType is required for CARGO" });
+      }
+      if (!value.transportMode) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["transportMode"], message: "transportMode is required for CARGO" });
+      }
+    }
+
+    if (value.coverType === "OPEN_COVER" && !value.openCoverId) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["openCoverId"], message: "openCoverId is required for OPEN_COVER" });
+    }
+
+    if (value.clientRate < value.insurerRate) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["clientRate"], message: "clientRate must be greater than or equal to insurerRate" });
+    }
+  });
 
 export const caseStatusTransitionSchema = z.object({
   toStatus: z.enum(CASE_LIFECYCLE),
   note: z.string().max(1000).optional().nullable(),
+  debitNoteAcknowledged: z.boolean().optional(),
 });
 
 export const caseListFilterSchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
-  pageSize: z.coerce.number().int().min(1).max(100).default(20),
+  pageSize: z.coerce.number().int().refine((v) => v === 20, { message: "pageSize must be 20" }).default(20),
   q: z.string().optional(),
-  status: z.enum(CASE_LIFECYCLE).optional(),
+  status: z
+    .preprocess((value) => {
+      if (typeof value !== "string" || value.trim() === "") {
+        return undefined;
+      }
+      return value
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+    }, z.array(z.enum(CASE_LIFECYCLE)).optional())
+    .optional(),
   productLine: z.enum(PRODUCT_LINES).optional(),
+  cargoProduct: z.enum(CARGO_SUB_PRODUCTS).optional(),
   coverType: z.enum(COVER_TYPES).optional(),
-  openCoverId: z.string().cuid().optional(),
+  sortBy: z
+    .enum([
+      "caseNumber",
+      "clientName",
+      "productLine",
+      "cargoProduct",
+      "coverType",
+      "status",
+      "sumInsured",
+      "brokerCommission",
+      "createdAt",
+    ])
+    .default("createdAt"),
+  sortDir: z.enum(["asc", "desc"]).default("desc"),
 });
 
 export const openCoverListFilterSchema = z.object({

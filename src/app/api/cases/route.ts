@@ -1,74 +1,46 @@
-import { CaseStatus, CoverType, Currency, Prisma } from "@prisma/client";
+﻿import { CaseStatus, CoverType, Currency, Prisma } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { NextRequest, NextResponse } from "next/server";
 
 import { apiError } from "@/lib/api-error";
-import { authOptions } from "@/lib/auth";
+import { canManageCase, authOptions } from "@/lib/auth";
+import { generateCaseNumber } from "@/lib/case-number";
 import { calculatePremiums } from "@/lib/calculations";
 import { isOpenCoverActive } from "@/lib/open-cover-status";
 import { prisma } from "@/lib/prisma";
 import { caseListFilterSchema, caseUpsertSchema } from "@/lib/validations";
-
-function buildCaseNumber(year: number, sequence: number): string {
-  return `BRK-${year}-${String(sequence).padStart(4, "0")}`;
-}
-
-async function generateCaseNumber() {
-  const year = new Date().getUTCFullYear();
-  const start = new Date(Date.UTC(year, 0, 1));
-  const end = new Date(Date.UTC(year + 1, 0, 1));
-
-  const count = await prisma.case.count({
-    where: {
-      createdAt: {
-        gte: start,
-        lt: end,
-      },
-    },
-  });
-
-  return buildCaseNumber(year, count + 1);
-}
 
 function toCaseSummary(item: {
   id: string;
   caseNumber: string;
   status: CaseStatus;
   productLine: string;
+  cargoProduct: string | null;
   coverType: string | null;
   clientName: string;
-  clientCompany: string | null;
   currency: Currency;
-  clientRate: Prisma.Decimal;
-  insurerRate: Prisma.Decimal;
-  clientPremium: Prisma.Decimal;
-  insurerPremium: Prisma.Decimal;
+  sumInsured: Prisma.Decimal;
   brokerCommission: Prisma.Decimal;
   createdAt: Date;
-  openCoverId: string | null;
 }) {
   return {
     id: item.id,
     caseNumber: item.caseNumber,
     status: item.status,
     productLine: item.productLine,
+    cargoProduct: item.cargoProduct,
     coverType: item.coverType,
     clientName: item.clientName,
-    clientCompany: item.clientCompany,
-    currency: item.currency,
-    clientRate: item.clientRate.toFixed(6),
-    insurerRate: item.insurerRate.toFixed(6),
-    clientPremium: item.clientPremium.toFixed(2),
-    insurerPremium: item.insurerPremium.toFixed(2),
+    sumInsured: item.sumInsured.toFixed(2),
     brokerCommission: item.brokerCommission.toFixed(2),
+    currency: item.currency,
     createdAt: item.createdAt.toISOString(),
-    openCoverId: item.openCoverId,
   };
 }
 
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (!session?.user) {
+  if (!canManageCase(session)) {
     return NextResponse.json(apiError("Unauthorized"), { status: 401 });
   }
 
@@ -77,29 +49,29 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(apiError("Invalid query", { issues: parsed.error.flatten() }), { status: 400 });
   }
 
-  const { page, pageSize, q, status, productLine, coverType, openCoverId } = parsed.data;
+  const { page, pageSize, q, status, productLine, cargoProduct, coverType, sortBy, sortDir } = parsed.data;
 
   const where: Prisma.CaseWhereInput = {
+    deletedAt: null,
     ...(q
       ? {
           OR: [
             { caseNumber: { contains: q, mode: "insensitive" } },
             { clientName: { contains: q, mode: "insensitive" } },
-            { clientCompany: { contains: q, mode: "insensitive" } },
           ],
         }
       : {}),
-    ...(status ? { status } : {}),
+    ...(status && status.length > 0 ? { status: { in: status as CaseStatus[] } } : {}),
     ...(productLine ? { productLine } : {}),
+    ...(cargoProduct ? { cargoProduct } : {}),
     ...(coverType ? { coverType } : {}),
-    ...(openCoverId ? { openCoverId } : {}),
   };
 
   const [total, items] = await Promise.all([
     prisma.case.count({ where }),
     prisma.case.findMany({
       where,
-      orderBy: { createdAt: "desc" },
+      orderBy: { [sortBy]: sortDir },
       skip: (page - 1) * pageSize,
       take: pageSize,
     }),
@@ -115,7 +87,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
+  if (!canManageCase(session)) {
     return NextResponse.json(apiError("Unauthorized"), { status: 401 });
   }
 
@@ -127,7 +99,6 @@ export async function POST(request: NextRequest) {
   }
 
   const payload = parsed.data;
-
   let insurerRate = payload.insurerRate;
   let currency = payload.currency;
   let clientName = payload.clientName;
@@ -159,17 +130,17 @@ export async function POST(request: NextRequest) {
     insurerRate,
   });
 
-  const caseNumber = await generateCaseNumber();
-
   const created = await prisma.case.create({
     data: {
-      caseNumber,
+      caseNumber: await generateCaseNumber(),
       productLine: payload.productLine,
       cargoProduct: payload.cargoProduct,
       coverType: payload.coverType,
       transportMode: payload.transportMode,
       openCoverId: payload.openCoverId ?? null,
       clientName,
+      clientEmail: payload.clientEmail ?? null,
+      clientPhone: payload.clientPhone ?? null,
       clientCompany,
       currency: currency as Currency,
       sumInsured: payload.sumInsured,
@@ -178,6 +149,12 @@ export async function POST(request: NextRequest) {
       clientPremium: premiums.clientPremium,
       insurerPremium: premiums.insurerPremium,
       brokerCommission: premiums.brokerCommission,
+      origin: payload.origin ?? null,
+      destination: payload.destination ?? null,
+      vessel: payload.vessel ?? null,
+      quantity: payload.quantity ?? null,
+      etd: payload.etd ?? null,
+      eta: payload.eta ?? null,
       notes: payload.notes ?? null,
       status: CaseStatus.DRAFT,
       createdById: session.user.id,

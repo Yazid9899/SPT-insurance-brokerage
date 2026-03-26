@@ -1,6 +1,7 @@
-import { describe, expect, it } from "vitest";
+﻿import { describe, expect, it } from "vitest";
 
 import { caseStatusTransitionSchema } from "@/lib/validations";
+import { validateTransitionInput } from "@/lib/status-transitions";
 
 describe("POST /api/cases/[id]/status transition route", () => {
   it("accepts valid transition payload", () => {
@@ -8,8 +9,24 @@ describe("POST /api/cases/[id]/status transition route", () => {
     expect(parsed.success).toBe(true);
   });
 
-  it("rejects malformed transition payload", () => {
-    const parsed = caseStatusTransitionSchema.safeParse({ toStatus: "INVALID" });
-    expect(parsed.success).toBe(false);
+  it("requires note for backward transitions", () => {
+    const error = validateTransitionInput({
+      fromStatus: "UNDERWRITING",
+      toStatus: "DOCUMENTATION",
+      caseData: {
+        productLine: "CARGO",
+        clientName: "PT Test",
+        cargoProduct: "CPO",
+        coverType: "SINGLE_SHIPMENT",
+        origin: "A",
+        destination: "B",
+        sumInsured: 1000,
+        clientRate: 1,
+        insurerRate: 0.5,
+      },
+      note: "",
+    });
+
+    expect(error).toContain("note");
   });
 });

@@ -80,22 +80,22 @@ model User {
 }
 
 model OpenCover {
-  id           String      @id @default(cuid())
-  reference    String      @unique
-  clientName   String
+  id            String       @id @default(cuid())
+  reference     String       @unique
+  clientName    String
   clientCompany String
-  insurerName  String
-  cargoProduct CargoProduct?
+  insurerName   String
+  cargoProduct  CargoProduct?
   transportMode TransportMode?
-  insurerRate  Decimal     @db.Decimal(8, 6)
-  currency     Currency
+  insurerRate   Decimal      @db.Decimal(8, 6)
+  currency      Currency
   effectiveFrom DateTime
-  effectiveTo  DateTime
-  isActive     Boolean     @default(true)
-  notes        String?
-  createdAt    DateTime    @default(now())
-  updatedAt    DateTime    @updatedAt
-  cases        Case[]
+  effectiveTo   DateTime
+  isActive      Boolean      @default(true)
+  notes         String?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  cases         Case[]
 
   @@index([clientName])
   @@index([isActive])
@@ -115,6 +115,7 @@ model Case {
   openCoverId      String?
   status           CaseStatus          @default(DRAFT)
   closedAt         DateTime?
+  deletedAt        DateTime?
   currency         Currency
   sumInsured       Decimal             @db.Decimal(20, 2)
   clientRate       Decimal             @db.Decimal(8, 6)
@@ -147,6 +148,7 @@ model Case {
   @@index([createdAt])
   @@index([openCoverId])
   @@index([bulkUploadId])
+  @@index([deletedAt])
 }
 
 model CaseDocument {
@@ -183,37 +185,37 @@ model CaseEmail {
 }
 
 model CaseStatusHistory {
-  id        String     @id @default(cuid())
-  caseId    String
+  id         String     @id @default(cuid())
+  caseId     String
   fromStatus CaseStatus?
-  toStatus  CaseStatus
-  changedAt DateTime   @default(now())
-  changedBy String
-  note      String?
-  case      Case       @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  toStatus   CaseStatus
+  changedAt  DateTime   @default(now())
+  changedBy  String
+  note       String?
+  case       Case       @relation(fields: [caseId], references: [id], onDelete: Cascade)
 
   @@index([caseId])
   @@index([changedAt])
 }
 
 model Settlement {
-  id                   String           @id @default(cuid())
-  settlementNumber     String           @unique
-  insurerName          String
-  period               String
-  currency             Currency
-  totalInsurerPremium  Decimal          @db.Decimal(20, 2)
-  totalBrokerCommission Decimal         @db.Decimal(20, 2)
-  status               SettlementStatus @default(DRAFT)
-  confirmedAt          DateTime?
-  paidAt               DateTime?
-  paymentRef           String?
-  notes                String?
-  createdById          String
-  createdAt            DateTime         @default(now())
-  updatedAt            DateTime         @updatedAt
-  createdBy            User             @relation(fields: [createdById], references: [id])
-  items                SettlementItem[]
+  id                    String           @id @default(cuid())
+  settlementNumber      String           @unique
+  insurerName           String
+  period                String
+  currency              Currency
+  totalInsurerPremium   Decimal          @db.Decimal(20, 2)
+  totalBrokerCommission Decimal          @db.Decimal(20, 2)
+  status                SettlementStatus @default(DRAFT)
+  confirmedAt           DateTime?
+  paidAt                DateTime?
+  paymentRef            String?
+  notes                 String?
+  createdById           String
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
+  createdBy             User             @relation(fields: [createdById], references: [id])
+  items                 SettlementItem[]
 
   @@index([status])
   @@index([period])

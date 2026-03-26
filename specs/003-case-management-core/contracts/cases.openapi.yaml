@@ -1,0 +1,318 @@
+﻿openapi: 3.0.3
+info:
+  title: Case Management API
+  version: 1.0.0
+  description: Contracts for case list/create/update/delete and status transitions.
+servers:
+  - url: /api
+paths:
+  /cases:
+    get:
+      summary: List cases with pagination/filtering/sorting
+      parameters:
+        - in: query
+          name: q
+          schema:
+            type: string
+          description: Search by case number or client name.
+        - in: query
+          name: status
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/CaseStatus'
+          style: form
+          explode: false
+          description: Comma-separated statuses.
+        - in: query
+          name: productLine
+          schema:
+            $ref: '#/components/schemas/ProductLine'
+        - in: query
+          name: cargoProduct
+          schema:
+            $ref: '#/components/schemas/CargoProduct'
+        - in: query
+          name: coverType
+          schema:
+            $ref: '#/components/schemas/CoverType'
+        - in: query
+          name: sortBy
+          schema:
+            type: string
+            enum: [caseNumber, clientName, productLine, cargoProduct, coverType, status, sumInsured, brokerCommission, createdAt]
+        - in: query
+          name: sortDir
+          schema:
+            type: string
+            enum: [asc, desc]
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - in: query
+          name: pageSize
+          schema:
+            type: integer
+            enum: [20]
+            default: 20
+      responses:
+        '200':
+          description: Paginated case list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CaseListItem'
+                  page:
+                    type: integer
+                  pageSize:
+                    type: integer
+                  total:
+                    type: integer
+    post:
+      summary: Create case (always starts in DRAFT)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CaseUpsertInput'
+      responses:
+        '201':
+          description: Case created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CaseDetail'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+  /cases/{id}:
+    put:
+      summary: Update existing case
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CaseUpsertInput'
+      responses:
+        '200':
+          description: Case updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CaseDetail'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+        '404':
+          $ref: '#/components/responses/ErrorResponse'
+    delete:
+      summary: Soft-delete case (Draft only)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Deleted (soft-delete)
+        '409':
+          $ref: '#/components/responses/ErrorResponse'
+        '404':
+          $ref: '#/components/responses/ErrorResponse'
+  /cases/{id}/status:
+    post:
+      summary: Transition case status
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [toStatus]
+              properties:
+                toStatus:
+                  $ref: '#/components/schemas/CaseStatus'
+                note:
+                  type: string
+                  maxLength: 2000
+      responses:
+        '200':
+          description: Status updated with history record
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  fromStatus:
+                    $ref: '#/components/schemas/CaseStatus'
+                  toStatus:
+                    $ref: '#/components/schemas/CaseStatus'
+                  changedAt:
+                    type: string
+                    format: date-time
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+        '409':
+          $ref: '#/components/responses/ErrorResponse'
+components:
+  responses:
+    ErrorResponse:
+      description: Consistent error shape
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [error]
+            properties:
+              error:
+                type: string
+              details:
+                type: object
+                additionalProperties: true
+  schemas:
+    CaseStatus:
+      type: string
+      enum: [DRAFT, DOCUMENTATION, UNDERWRITING, ACTIVE, BILLING, SETTLING, CLOSED]
+    ProductLine:
+      type: string
+      enum: [CARGO, PROPERTY, MARINE_HULL, UTILITY]
+    CargoProduct:
+      type: string
+      enum: [CPO, BIODIESEL, SHORTENING]
+    CoverType:
+      type: string
+      enum: [OPEN_COVER, SINGLE_SHIPMENT]
+    CaseListItem:
+      type: object
+      required: [id, caseNumber, clientName, productLine, status, sumInsured, brokerCommission, createdAt]
+      properties:
+        id:
+          type: string
+        caseNumber:
+          type: string
+        clientName:
+          type: string
+        productLine:
+          $ref: '#/components/schemas/ProductLine'
+        cargoProduct:
+          $ref: '#/components/schemas/CargoProduct'
+        coverType:
+          $ref: '#/components/schemas/CoverType'
+        status:
+          $ref: '#/components/schemas/CaseStatus'
+        sumInsured:
+          type: string
+          description: Decimal-as-string
+        brokerCommission:
+          type: string
+          description: Decimal-as-string
+        createdAt:
+          type: string
+          format: date-time
+    CaseUpsertInput:
+      type: object
+      required: [productLine, clientName, currency, sumInsured]
+      properties:
+        productLine:
+          $ref: '#/components/schemas/ProductLine'
+        cargoProduct:
+          $ref: '#/components/schemas/CargoProduct'
+        coverType:
+          $ref: '#/components/schemas/CoverType'
+        transportMode:
+          type: string
+          enum: [MARINE, TRUCKING]
+        openCoverId:
+          type: string
+        clientName:
+          type: string
+        clientEmail:
+          type: string
+          format: email
+        clientPhone:
+          type: string
+        clientCompany:
+          type: string
+        currency:
+          type: string
+          enum: [IDR, USD, SGD, MYR]
+        sumInsured:
+          type: string
+          description: Decimal-as-string
+        clientRate:
+          type: string
+          description: Decimal-as-string
+        insurerRate:
+          type: string
+          description: Decimal-as-string
+        origin:
+          type: string
+        destination:
+          type: string
+        vessel:
+          type: string
+        quantity:
+          type: string
+          description: Decimal-as-string
+        etd:
+          type: string
+          format: date-time
+        eta:
+          type: string
+          format: date-time
+        notes:
+          type: string
+    CaseDetail:
+      allOf:
+        - $ref: '#/components/schemas/CaseListItem'
+        - type: object
+          properties:
+            clientRate:
+              type: string
+            insurerRate:
+              type: string
+            clientPremium:
+              type: string
+            insurerPremium:
+              type: string
+            openCoverId:
+              type: string
+            statusHistory:
+              type: array
+              items:
+                type: object
+                properties:
+                  fromStatus:
+                    $ref: '#/components/schemas/CaseStatus'
+                  toStatus:
+                    $ref: '#/components/schemas/CaseStatus'
+                  changedAt:
+                    type: string
+                    format: date-time
+                  changedBy:
+                    type: string
+                  note:
+                    type: string

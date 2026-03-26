@@ -1,0 +1,56 @@
+﻿import { notFound } from "next/navigation";
+
+import { CaseDetail } from "@/components/cases/case-detail";
+import { PageHeader } from "@/components/shared/page-header";
+import { prisma } from "@/lib/prisma";
+
+export default async function CaseDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const found = await prisma.case.findFirst({
+    where: { id, deletedAt: null },
+    include: { statusHistory: { orderBy: { changedAt: "desc" } } },
+  });
+
+  if (!found) {
+    notFound();
+  }
+
+  return (
+    <div className="space-y-4">
+      <PageHeader title="Case Detail" description={found.caseNumber} />
+      <CaseDetail
+        data={{
+          id: found.id,
+          caseNumber: found.caseNumber,
+          status: found.status,
+          productLine: found.productLine,
+          cargoProduct: found.cargoProduct,
+          coverType: found.coverType,
+          clientName: found.clientName,
+          currency: found.currency,
+          sumInsured: found.sumInsured.toFixed(2),
+          clientRate: found.clientRate.toFixed(6),
+          insurerRate: found.insurerRate.toFixed(6),
+          clientPremium: found.clientPremium.toFixed(2),
+          insurerPremium: found.insurerPremium.toFixed(2),
+          brokerCommission: found.brokerCommission.toFixed(2),
+          origin: found.origin,
+          destination: found.destination,
+          vessel: found.vessel,
+          quantity: found.quantity?.toFixed(2) ?? null,
+          etd: found.etd?.toISOString() ?? null,
+          eta: found.eta?.toISOString() ?? null,
+          notes: found.notes,
+          openCoverId: found.openCoverId,
+          statusHistory: found.statusHistory.map((h) => ({
+            fromStatus: h.fromStatus,
+            toStatus: h.toStatus,
+            changedAt: h.changedAt.toISOString(),
+            changedBy: h.changedBy,
+            note: h.note,
+          })),
+        }}
+      />
+    </div>
+  );
+}

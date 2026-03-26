@@ -1,9 +1,14 @@
-import { compare } from "bcryptjs";
+﻿import { compare } from "bcryptjs";
+import type { Session } from "next-auth";
 import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 
 import { prisma } from "@/lib/prisma";
 import { loginSchema } from "@/lib/validations";
+
+export function canManageCase(session: Session | null | undefined): session is Session & { user: { id: string } } {
+  return Boolean(session?.user?.id);
+}
 
 export const authOptions: NextAuthOptions = {
   session: { strategy: "jwt" },
