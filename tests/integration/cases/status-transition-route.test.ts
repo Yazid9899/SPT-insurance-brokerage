@@ -61,4 +61,26 @@ describe("POST /api/cases/[id]/status transition route", () => {
 
     expect(error?.toLowerCase()).toContain("debit note");
   });
+
+  it("keeps billing to settling restricted to settlement flow", () => {
+    const error = validateTransitionInput({
+      fromStatus: "BILLING",
+      toStatus: "SETTLING",
+      caseData: {
+        productLine: "CARGO",
+        clientName: "PT Test",
+        cargoProduct: "CPO",
+        coverType: "SINGLE_SHIPMENT",
+        origin: "A",
+        destination: "B",
+        sumInsured: 1000,
+        clientRate: 1,
+        insurerRate: 0.5,
+      },
+      note: "via detail",
+      fromSettlementFlow: false,
+    });
+
+    expect(error).toContain("settlement flow");
+  });
 });

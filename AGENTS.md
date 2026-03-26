@@ -13,6 +13,8 @@ Auto-generated from all feature plans. Last updated: 2026-03-26
 - PostgreSQL via Prisma (`CaseEmail`, `Case`, `Settlement`, `User`) + system-defined template catalog in application domain layer (005-email-template-system)
 - TypeScript (strict), Node.js 20 LTS + Next.js App Router, React, Prisma, Zod, react-hook-form, `@hookform/resolvers`, SheetJS (`xlsx`), NextAuth.js (006-bulk-draft-upload)
 - PostgreSQL via Prisma (`Case`, `OpenCover`, `CaseDocument`) + local file storage in development for shared documents (006-bulk-draft-upload)
+- TypeScript (strict mode), Node.js 20 LTS + Next.js App Router, React, Prisma, Zod, NextAuth.js, decimal.js (007-monthly-insurer-settlement)
+- PostgreSQL via Prisma (`Settlement`, `SettlementItem`, `Case`, `CaseStatusHistory`) (007-monthly-insurer-settlement)
 
 - TypeScript (strict mode), Node.js 20 LTS, Next.js 14+ App Router + Next.js, React, NextAuth.js (credentials), Prisma, `@prisma/client`, bcrypt, Zod, react-hook-form, shadcn/ui, Tailwind CSS, SheetJS (`xlsx`), recharts, date-fns, Resend (001-foundation-auth-shell)
 
@@ -33,9 +35,9 @@ npm test && npm run lint
 TypeScript (strict mode), Node.js 20 LTS, Next.js 14+ App Router: Follow standard conventions
 
 ## Recent Changes
+- 007-monthly-insurer-settlement: Added TypeScript (strict mode), Node.js 20 LTS + Next.js App Router, React, Prisma, Zod, NextAuth.js, decimal.js
 - 006-bulk-draft-upload: Added TypeScript (strict), Node.js 20 LTS + Next.js App Router, React, Prisma, Zod, react-hook-form, `@hookform/resolvers`, SheetJS (`xlsx`), NextAuth.js
 - 005-email-template-system: Added TypeScript (strict), Node.js 20 LTS + Next.js App Router, React, Prisma, Zod, react-hook-form, NextAuth.js
-- 004-document-management: Added TypeScript (strict), Node.js 20 LTS + Next.js App Router, React, Prisma, Zod, react-hook-form, @hookform/resolvers, NextAuth.js
 
 
 <!-- MANUAL ADDITIONS START -->

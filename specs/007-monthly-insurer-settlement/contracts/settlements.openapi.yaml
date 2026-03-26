@@ -1,0 +1,270 @@
+openapi: 3.0.3
+info:
+  title: Monthly Insurer Settlement API
+  version: 1.0.0
+  description: Contracts for settlement list/create/detail/update/confirm/pay workflows.
+servers:
+  - url: /api
+paths:
+  /settlements:
+    get:
+      summary: List settlements
+      parameters:
+        - in: query
+          name: period
+          schema:
+            type: string
+        - in: query
+          name: insurer
+          schema:
+            type: string
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [DRAFT, CONFIRMED, PAID]
+      responses:
+        '200':
+          description: Settlement list
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/SettlementListItem'
+    post:
+      summary: Create DRAFT settlement and preload eligible BILLING cases
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [insurerName, period]
+              properties:
+                insurerName:
+                  type: string
+                period:
+                  type: string
+                  example: 2026-03
+      responses:
+        '201':
+          description: Settlement created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SettlementDetail'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+        '409':
+          $ref: '#/components/responses/ErrorResponse'
+  /settlements/{id}:
+    get:
+      summary: Get settlement detail with matching items
+      parameters:
+        - $ref: '#/components/parameters/SettlementId'
+      responses:
+        '200':
+          description: Settlement detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SettlementDetail'
+        '404':
+          $ref: '#/components/responses/ErrorResponse'
+    put:
+      summary: Update matching state in DRAFT settlement
+      parameters:
+        - $ref: '#/components/parameters/SettlementId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [items]
+              properties:
+                items:
+                  type: array
+                  items:
+                    type: object
+                    required: [caseId, matched]
+                    properties:
+                      caseId:
+                        type: string
+                      matched:
+                        type: boolean
+      responses:
+        '200':
+          description: Updated settlement detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SettlementDetail'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+        '409':
+          $ref: '#/components/responses/ErrorResponse'
+  /settlements/{id}/confirm:
+    post:
+      summary: Confirm settlement and transition selected cases BILLING to SETTLING
+      parameters:
+        - $ref: '#/components/parameters/SettlementId'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                note:
+                  type: string
+      responses:
+        '200':
+          description: Settlement confirmed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SettlementDetail'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+        '409':
+          $ref: '#/components/responses/ErrorResponse'
+  /settlements/{id}/pay:
+    post:
+      summary: Mark settlement paid and transition matched cases SETTLING to CLOSED
+      parameters:
+        - $ref: '#/components/parameters/SettlementId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [paymentDate, bankTransferReference]
+              properties:
+                paymentDate:
+                  type: string
+                  format: date
+                bankTransferReference:
+                  type: string
+                note:
+                  type: string
+      responses:
+        '200':
+          description: Settlement marked paid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SettlementDetail'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+        '409':
+          $ref: '#/components/responses/ErrorResponse'
+components:
+  parameters:
+    SettlementId:
+      in: path
+      name: id
+      required: true
+      schema:
+        type: string
+  responses:
+    ErrorResponse:
+      description: Consistent error shape
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [error]
+            properties:
+              error:
+                type: string
+              details:
+                type: object
+                additionalProperties: true
+  schemas:
+    SettlementListItem:
+      type: object
+      required:
+        [id, settlementNumber, period, insurerName, status, caseCount, totalInsurerPremium, totalBrokerCommission]
+      properties:
+        id:
+          type: string
+        settlementNumber:
+          type: string
+        period:
+          type: string
+        insurerName:
+          type: string
+        status:
+          type: string
+          enum: [DRAFT, CONFIRMED, PAID]
+        caseCount:
+          type: integer
+        totalInsurerPremium:
+          type: string
+        totalBrokerCommission:
+          type: string
+    SettlementItem:
+      type: object
+      required: [caseId, caseNumber, matched, insurerPremium, brokerCommission, caseStatus]
+      properties:
+        caseId:
+          type: string
+        caseNumber:
+          type: string
+        matched:
+          type: boolean
+        insurerPremium:
+          type: string
+        brokerCommission:
+          type: string
+        caseStatus:
+          type: string
+    SettlementDetail:
+      type: object
+      required:
+        - id
+        - settlementNumber
+        - period
+        - insurerName
+        - status
+        - totalInsurerPremium
+        - totalBrokerCommission
+        - caseCount
+        - items
+      properties:
+        id:
+          type: string
+        settlementNumber:
+          type: string
+        period:
+          type: string
+        insurerName:
+          type: string
+        status:
+          type: string
+          enum: [DRAFT, CONFIRMED, PAID]
+        paymentDate:
+          type: string
+          format: date
+          nullable: true
+        bankTransferReference:
+          type: string
+          nullable: true
+        totalInsurerPremium:
+          type: string
+        totalBrokerCommission:
+          type: string
+        caseCount:
+          type: integer
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/SettlementItem'
+

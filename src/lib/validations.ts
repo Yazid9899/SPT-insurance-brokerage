@@ -165,6 +165,41 @@ export const caseEmailCreateSchema = z.object({
   body: z.string().trim().min(1),
 });
 
+const settlementPeriodRegex = /^\d{4}-(0[1-9]|1[0-2])$/;
+
+export const settlementCreateSchema = z.object({
+  insurerName: z.string().trim().min(1),
+  period: z
+    .string()
+    .trim()
+    .regex(settlementPeriodRegex, "period must be YYYY-MM"),
+});
+
+export const settlementListFilterSchema = z.object({
+  period: z.string().trim().regex(settlementPeriodRegex).optional(),
+  insurer: z.string().trim().optional(),
+  status: z.enum(["DRAFT", "CONFIRMED", "PAID"]).optional(),
+});
+
+export const settlementMatchingUpdateSchema = z.object({
+  items: z.array(
+    z.object({
+      caseId: z.string().cuid(),
+      matched: z.boolean(),
+    }),
+  ),
+});
+
+export const settlementConfirmSchema = z.object({
+  note: z.string().max(1000).optional().nullable(),
+});
+
+export const settlementPaySchema = z.object({
+  paymentDate: z.coerce.date(),
+  bankTransferReference: z.string().trim().min(1).max(200),
+  note: z.string().max(1000).optional().nullable(),
+});
+
 export const bulkUploadTempDocumentSchema = z.object({
   draftId: z.string().min(1),
 });

@@ -1,10 +1,14 @@
 import { PageHeader } from "@/components/shared/page-header";
+import { SettlementsPageClient } from "@/components/settlements/settlements-page-client";
+import { listSettlements } from "@/lib/settlement-service";
 
-export default function SettlementsPage() {
+export default async function SettlementsPage() {
+  const items = await listSettlements({});
+
   return (
     <div className="space-y-4">
-      <PageHeader title="Settlements" description="Settlement placeholder" />
-      <p className="rounded border bg-white p-4">Settlement processing arrives in a later feature.</p>
+      <PageHeader title="Settlements" description="Manage monthly insurer settlement batches" />
+      <SettlementsPageClient initialRows={items} />
     </div>
   );
 }

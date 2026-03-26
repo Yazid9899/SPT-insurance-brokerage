@@ -3,6 +3,8 @@
 import { prisma } from "@/lib/prisma";
 
 export async function closeCasesForPaidSettlement(settlementId: string, changedBy: string): Promise<number> {
+  // Compatibility shim for callers that trigger closure after marking settlement paid.
+  // Core pay flow already closes cases atomically; this function is idempotent.
   return prisma.$transaction(async (tx) => {
     const settlement = await tx.settlement.findUnique({
       where: { id: settlementId },

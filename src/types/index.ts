@@ -126,3 +126,39 @@ export type BulkUploadDraftState = {
   rows: BulkUploadRowDraft[];
   tempDocumentIds: string[];
 };
+
+export type SettlementStatusValue = "DRAFT" | "CONFIRMED" | "PAID";
+
+export type SettlementListItem = {
+  id: string;
+  settlementNumber: string;
+  period: string;
+  insurerName: string;
+  status: SettlementStatusValue;
+  caseCount: number;
+  totalInsurerPremium: string;
+  totalBrokerCommission: string;
+};
+
+export type SettlementItem = {
+  caseId: string;
+  caseNumber: string;
+  matched: boolean;
+  insurerPremium: string;
+  brokerCommission: string;
+  caseStatus: string;
+};
+
+export type SettlementDetail = {
+  id: string;
+  settlementNumber: string;
+  period: string;
+  insurerName: string;
+  status: SettlementStatusValue;
+  paymentDate: string | null;
+  bankTransferReference: string | null;
+  totalInsurerPremium: string;
+  totalBrokerCommission: string;
+  caseCount: number;
+  items: SettlementItem[];
+};

@@ -1,0 +1,7 @@
+import { expect, test } from "@playwright/test";
+
+test("settlement confirm lock shell", async ({ page }) => {
+  await page.goto("/settlements");
+  await expect(page).toHaveURL(/\/settlements/);
+});
+
