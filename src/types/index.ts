@@ -92,3 +92,37 @@ export type CaseEmailItem = {
   body: string;
   sentAt: string;
 };
+
+export type BulkUploadColumnMapping = {
+  targetField: "origin" | "destination" | "vessel" | "quantity" | "sumInsured" | "etd" | "eta" | "notes";
+  sourceHeader: string;
+  sourceColumnIndex: number;
+  mappingSource: "auto" | "manual";
+};
+
+export type BulkUploadRowDraft = {
+  rowIndex: number;
+  origin: string | null;
+  destination: string | null;
+  vessel: string | null;
+  quantity: number | null;
+  sumInsured: number | null;
+  etd: string | null;
+  eta: string | null;
+  notes: string | null;
+  clientPremium: string;
+  insurerPremium: string;
+  brokerCommission: string;
+  errors: string[];
+};
+
+export type BulkUploadDraftState = {
+  draftId: string;
+  openCoverId: string;
+  clientRate: number;
+  insurerRate: number;
+  xlsFileName: string;
+  mappings: BulkUploadColumnMapping[];
+  rows: BulkUploadRowDraft[];
+  tempDocumentIds: string[];
+};

@@ -12,6 +12,7 @@ import {
   PRODUCT_LINES,
   TRANSPORT_MODES,
 } from "@/lib/constants";
+import { BULK_UPLOAD_TARGET_FIELDS } from "@/lib/bulk-upload/header-aliases";
 
 export const loginSchema = z.object({
   email: z.string().email(),
@@ -163,6 +164,51 @@ export const caseEmailCreateSchema = z.object({
   subject: z.string().trim().min(1),
   body: z.string().trim().min(1),
 });
+
+export const bulkUploadTempDocumentSchema = z.object({
+  draftId: z.string().min(1),
+});
+
+export const bulkUploadColumnMappingSchema = z.object({
+  targetField: z.enum(BULK_UPLOAD_TARGET_FIELDS),
+  sourceHeader: z.string().min(1),
+  sourceColumnIndex: z.coerce.number().int().min(0),
+  mappingSource: z.enum(["auto", "manual"]).default("manual"),
+});
+
+export const bulkUploadRowSchema = z.object({
+  rowIndex: z.coerce.number().int().min(1),
+  origin: z.string().trim().min(1),
+  destination: z.string().trim().min(1),
+  vessel: z.string().trim().min(1),
+  quantity: z.coerce.number().positive(),
+  sumInsured: z.coerce.number().positive(),
+  etd: z.string().trim().min(1),
+  eta: z.string().trim().optional().nullable(),
+  notes: z.string().max(2000).optional().nullable(),
+});
+
+export const bulkUploadCreateSchema = z
+  .object({
+    openCoverId: z.string().cuid(),
+    clientRate: z.coerce.number().positive(),
+    mappings: z.array(bulkUploadColumnMappingSchema),
+    rows: z.array(bulkUploadRowSchema).min(1).max(10),
+    tempDocumentIds: z.array(z.string().min(1)).optional().default([]),
+  })
+  .superRefine((value, ctx) => {
+    const required = new Set(["origin", "destination", "vessel", "quantity", "sumInsured", "etd"]);
+    const mapped = new Set(value.mappings.map((m) => m.targetField));
+    required.forEach((target) => {
+      if (!mapped.has(target as (typeof BULK_UPLOAD_TARGET_FIELDS)[number])) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["mappings"],
+          message: `Missing required mapping: ${target}`,
+        });
+      }
+    });
+  });
 
 const ALLOWED_MIME_SET = new Set(DOCUMENT_ALLOWED_MIME_TYPES);
 const ALLOWED_EXT_SET = new Set(DOCUMENT_ALLOWED_EXTENSIONS);

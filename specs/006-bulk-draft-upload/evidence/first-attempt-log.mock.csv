@@ -1,0 +1,21 @@
+attempt_id,operator_id,test_date,first_attempt_success,restart_required,external_help,duration_minutes,notes
+1,OP-001,2026-03-26,Y,N,N,7,Mock data only
+2,OP-002,2026-03-26,Y,N,N,8,Mock data only
+3,OP-003,2026-03-26,Y,N,N,9,Mock data only
+4,OP-004,2026-03-26,Y,N,N,10,Mock data only
+5,OP-005,2026-03-26,Y,N,N,8,Mock data only
+6,OP-006,2026-03-26,Y,N,N,9,Mock data only
+7,OP-007,2026-03-26,Y,N,N,11,Mock data only
+8,OP-008,2026-03-26,Y,N,N,7,Mock data only
+9,OP-009,2026-03-26,Y,N,N,8,Mock data only
+10,OP-010,2026-03-26,Y,N,N,9,Mock data only
+11,OP-011,2026-03-26,Y,N,N,8,Mock data only
+12,OP-012,2026-03-26,Y,N,N,7,Mock data only
+13,OP-013,2026-03-26,Y,N,N,10,Mock data only
+14,OP-014,2026-03-26,Y,N,N,9,Mock data only
+15,OP-015,2026-03-26,Y,N,N,8,Mock data only
+16,OP-016,2026-03-26,Y,N,N,9,Mock data only
+17,OP-017,2026-03-26,Y,N,N,7,Mock data only
+18,OP-018,2026-03-26,Y,N,N,10,Mock data only
+19,OP-019,2026-03-26,Y,N,N,8,Mock data only
+20,OP-020,2026-03-26,N,Y,Y,14,Mock fail sample

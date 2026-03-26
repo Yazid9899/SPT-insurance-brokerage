@@ -15,6 +15,7 @@ export default async function CasesPage({
   const productLine = typeof query.productLine === "string" ? query.productLine : "";
   const cargoProduct = typeof query.cargoProduct === "string" ? query.cargoProduct : "";
   const coverType = typeof query.coverType === "string" ? query.coverType : "";
+  const bulkUploadId = typeof query.bulkUploadId === "string" ? query.bulkUploadId : "";
   const page = Math.max(1, Number(typeof query.page === "string" ? query.page : "1") || 1);
 
   const statuses = statusCsv
@@ -23,7 +24,6 @@ export default async function CasesPage({
     .filter(Boolean);
 
   const where = {
-    deletedAt: null,
     ...(q
       ? {
           OR: [
@@ -36,6 +36,7 @@ export default async function CasesPage({
     ...(productLine ? { productLine: productLine as never } : {}),
     ...(cargoProduct ? { cargoProduct: cargoProduct as never } : {}),
     ...(coverType ? { coverType: coverType as never } : {}),
+    ...(bulkUploadId ? { bulkUploadId } : {}),
   };
 
   const [total, cases] = await Promise.all([
@@ -68,9 +69,11 @@ export default async function CasesPage({
         <input type="text" name="productLine" defaultValue={productLine} placeholder="product line" className="rounded border px-2 py-1" />
         <input type="text" name="cargoProduct" defaultValue={cargoProduct} placeholder="cargo product" className="rounded border px-2 py-1" />
         <input type="text" name="coverType" defaultValue={coverType} placeholder="cover type" className="rounded border px-2 py-1" />
+        <input type="text" name="bulkUploadId" defaultValue={bulkUploadId} placeholder="bulk upload id" className="rounded border px-2 py-1" />
         <input type="hidden" name="page" value="1" />
         <button type="submit" className="rounded border px-3 py-1 text-sm">Apply</button>
         <a href="/cases/new" className="rounded bg-slate-900 px-3 py-1 text-center text-sm text-white">New Case</a>
+        <a href="/cases/bulk-upload" className="rounded bg-slate-700 px-3 py-1 text-center text-sm text-white">Bulk Upload</a>
       </form>
 
       <CaseTable rows={rows} />
@@ -82,13 +85,13 @@ export default async function CasesPage({
         <div className="flex gap-2">
           <a
             className={`rounded border px-2 py-1 ${page <= 1 ? "pointer-events-none opacity-50" : ""}`}
-            href={`?q=${encodeURIComponent(q)}&status=${encodeURIComponent(statusCsv)}&productLine=${encodeURIComponent(productLine)}&cargoProduct=${encodeURIComponent(cargoProduct)}&coverType=${encodeURIComponent(coverType)}&page=${Math.max(1, page - 1)}`}
+            href={`?q=${encodeURIComponent(q)}&status=${encodeURIComponent(statusCsv)}&productLine=${encodeURIComponent(productLine)}&cargoProduct=${encodeURIComponent(cargoProduct)}&coverType=${encodeURIComponent(coverType)}&bulkUploadId=${encodeURIComponent(bulkUploadId)}&page=${Math.max(1, page - 1)}`}
           >
             Prev
           </a>
           <a
             className={`rounded border px-2 py-1 ${page >= totalPages ? "pointer-events-none opacity-50" : ""}`}
-            href={`?q=${encodeURIComponent(q)}&status=${encodeURIComponent(statusCsv)}&productLine=${encodeURIComponent(productLine)}&cargoProduct=${encodeURIComponent(cargoProduct)}&coverType=${encodeURIComponent(coverType)}&page=${Math.min(totalPages, page + 1)}`}
+            href={`?q=${encodeURIComponent(q)}&status=${encodeURIComponent(statusCsv)}&productLine=${encodeURIComponent(productLine)}&cargoProduct=${encodeURIComponent(cargoProduct)}&coverType=${encodeURIComponent(coverType)}&bulkUploadId=${encodeURIComponent(bulkUploadId)}&page=${Math.min(totalPages, page + 1)}`}
           >
             Next
           </a>
