@@ -6,12 +6,16 @@ import { useState } from "react";
 import { z } from "zod";
 
 import { CARGO_SUB_PRODUCTS, CURRENCIES, TRANSPORT_MODES } from "@/lib/constants";
+import type { PartyOption } from "@/types";
 
 const formSchema = z.object({
   reference: z.string().min(1),
   clientName: z.string().min(1),
   clientCompany: z.string().min(1),
   insurerName: z.string().min(1),
+  insurerId: z.string().optional().nullable(),
+  clientIds: z.array(z.string()).default([]),
+  isActive: z.boolean().default(true),
   productLine: z.literal("CARGO"),
   cargoProduct: z.enum(CARGO_SUB_PRODUCTS),
   transportMode: z.enum(TRANSPORT_MODES),
@@ -28,10 +32,14 @@ export function OpenCoverForm({
   mode,
   openCoverId,
   defaultValues,
+  clients,
+  insurers,
 }: {
   mode: "create" | "edit";
   openCoverId?: string;
   defaultValues?: Partial<FormValues>;
+  clients: PartyOption[];
+  insurers: PartyOption[];
 }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
@@ -43,6 +51,9 @@ export function OpenCoverForm({
       clientName: defaultValues?.clientName ?? "",
       clientCompany: defaultValues?.clientCompany ?? "",
       insurerName: defaultValues?.insurerName ?? "",
+      insurerId: defaultValues?.insurerId ?? null,
+      clientIds: defaultValues?.clientIds ?? [],
+      isActive: defaultValues?.isActive ?? true,
       productLine: "CARGO",
       cargoProduct: defaultValues?.cargoProduct ?? "CPO",
       transportMode: defaultValues?.transportMode ?? "MARINE",
@@ -58,9 +69,21 @@ export function OpenCoverForm({
     setSaving(true);
     setError(null);
 
+    if (values.isActive && values.clientIds.length === 0) {
+      setError("Active open cover requires at least one linked client");
+      setSaving(false);
+      return;
+    }
+
+    const selectedInsurer = insurers.find((item) => item.id === values.insurerId);
+    const selectedClient = clients.find((item) => values.clientIds.includes(item.id));
+
     const payload = {
       ...values,
       productLine: "CARGO",
+      insurerName: selectedInsurer?.displayName ?? values.insurerName,
+      clientName: selectedClient?.displayName ?? values.clientName,
+      clientCompany: selectedClient?.company ?? values.clientCompany,
       insurerRate: Number(values.insurerRate),
       effectiveFrom: values.effectiveFrom,
       effectiveTo: values.effectiveTo,
@@ -96,16 +119,25 @@ export function OpenCoverForm({
           <input className="w-full rounded border px-2 py-1" {...form.register("reference")} />
         </label>
         <label className="space-y-1">
-          <span className="text-sm">Insurer Name</span>
-          <input className="w-full rounded border px-2 py-1" {...form.register("insurerName")} />
+          <span className="text-sm">Insurer</span>
+          <select className="w-full rounded border px-2 py-1" {...form.register("insurerId")}>
+            <option value="">Select insurer</option>
+            {insurers.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.displayName}
+              </option>
+            ))}
+          </select>
         </label>
-        <label className="space-y-1">
-          <span className="text-sm">Client Name</span>
-          <input className="w-full rounded border px-2 py-1" {...form.register("clientName")} />
-        </label>
-        <label className="space-y-1">
-          <span className="text-sm">Client Company</span>
-          <input className="w-full rounded border px-2 py-1" {...form.register("clientCompany")} />
+        <label className="space-y-1 md:col-span-2">
+          <span className="text-sm">Linked Clients</span>
+          <select className="h-32 w-full rounded border px-2 py-1" multiple {...form.register("clientIds")}>
+            {clients.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.displayName} {item.company ? `(${item.company})` : ""}
+              </option>
+            ))}
+          </select>
         </label>
         <label className="space-y-1">
           <span className="text-sm">Cargo Product</span>
@@ -148,6 +180,10 @@ export function OpenCoverForm({
         <label className="space-y-1">
           <span className="text-sm">Effective To</span>
           <input className="w-full rounded border px-2 py-1" type="date" {...form.register("effectiveTo")} />
+        </label>
+        <label className="space-y-1">
+          <span className="text-sm">Active</span>
+          <input type="checkbox" className="h-4 w-4" {...form.register("isActive")} />
         </label>
       </div>
 

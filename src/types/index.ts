@@ -25,8 +25,10 @@ export type OpenCoverListItem = {
   reference: string;
   clientName: string;
   clientCompany: string;
+  clientIds?: string[];
   cargoProduct: string | null;
   insurerName: string;
+  insurerId?: string | null;
   insurerRate: string;
   effectiveFrom: string;
   effectiveTo: string;
@@ -38,6 +40,16 @@ export type OpenCoverDetail = OpenCoverListItem & {
   transportMode: string | null;
   currency: string;
   notes: string | null;
+  linkedClients?: Array<{ id: string; displayName: string; company: string | null; status: "ACTIVE" | "INACTIVE" }>;
+};
+
+export type PartyOption = {
+  id: string;
+  displayName: string;
+  company?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  status: "ACTIVE" | "INACTIVE";
 };
 
 export type CaseSummary = {
@@ -48,6 +60,9 @@ export type CaseSummary = {
   coverType: string | null;
   clientName: string;
   clientCompany: string | null;
+  clientId?: string | null;
+  insurerId?: string | null;
+  insurerName?: string | null;
   currency: string;
   clientRate: string;
   insurerRate: string;
@@ -189,6 +204,7 @@ export type ReportsSummaryMetrics = {
 export type ReportsCaseRow = {
   caseNumber: string;
   clientName: string;
+  insurerName: string | null;
   productLine: string;
   cargoProduct: string | null;
   coverType: string | null;

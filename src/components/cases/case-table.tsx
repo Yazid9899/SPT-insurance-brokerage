@@ -8,6 +8,7 @@ export type CaseListRow = {
   id: string;
   caseNumber: string;
   clientName: string;
+  insurerName?: string | null;
   productLine: string;
   cargoProduct: string | null;
   coverType: string | null;
@@ -25,6 +26,7 @@ export function CaseTable({ rows }: { rows: CaseListRow[] }) {
           <tr className="border-b bg-slate-50 text-left">
             <th className="px-3 py-2">Case #</th>
             <th className="px-3 py-2">Client</th>
+            <th className="px-3 py-2">Insurer</th>
             <th className="px-3 py-2">Product</th>
             <th className="px-3 py-2">Cargo Product</th>
             <th className="px-3 py-2">Cover Type</th>
@@ -43,6 +45,7 @@ export function CaseTable({ rows }: { rows: CaseListRow[] }) {
                 </Link>
               </td>
               <td className="px-3 py-2">{item.clientName}</td>
+              <td className="px-3 py-2">{item.insurerName ?? "-"}</td>
               <td className="px-3 py-2">{item.productLine}</td>
               <td className="px-3 py-2">{item.cargoProduct ?? "-"}</td>
               <td className="px-3 py-2">{item.coverType ?? "-"}</td>
@@ -56,7 +59,7 @@ export function CaseTable({ rows }: { rows: CaseListRow[] }) {
           ))}
           {rows.length === 0 ? (
             <tr>
-              <td colSpan={9} className="px-3 py-6 text-center text-slate-500">
+              <td colSpan={10} className="px-3 py-6 text-center text-slate-500">
                 No cases found.
               </td>
             </tr>

@@ -26,6 +26,8 @@ type CaseDetailData = {
   cargoProduct: string | null;
   coverType: string | null;
   clientName: string;
+  clientId?: string | null;
+  insurerId?: string | null;
   clientEmail: string | null;
   currency: string;
   sumInsured: string;

@@ -17,6 +17,7 @@ export default async function OpenCoverDetailPage({
   const agreement = await prisma.openCover.findUnique({
     where: { id },
     include: {
+      clientLinks: { include: { client: true } },
       cases: {
         where: {
           ...(caseStatus ? { status: caseStatus as never } : {}),
@@ -69,6 +70,12 @@ export default async function OpenCoverDetailPage({
           transportMode: agreement.transportMode,
           currency: agreement.currency,
           notes: agreement.notes,
+          linkedClients: agreement.clientLinks.map((item) => ({
+            id: item.client.id,
+            displayName: item.client.displayName,
+            company: item.client.company,
+            status: item.client.status,
+          })),
         }}
         declarations={agreement.cases.map((item) => ({
           id: item.id,

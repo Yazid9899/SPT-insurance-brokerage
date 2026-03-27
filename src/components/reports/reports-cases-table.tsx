@@ -12,6 +12,7 @@ export function ReportsCasesTable({ rows }: Props) {
   const data = rows.map((row) => ({
     caseNumber: row.caseNumber,
     clientName: row.clientName,
+    insurerName: row.insurerName ?? "-",
     productLine: row.productLine,
     cargoProduct: row.cargoProduct ?? "-",
     coverType: row.coverType ?? "-",
@@ -43,6 +44,7 @@ export function ReportsCasesTable({ rows }: Props) {
         columns={[
           { key: "caseNumber", label: "Case #" },
           { key: "clientName", label: "Client" },
+          { key: "insurerName", label: "Insurer" },
           { key: "productLine", label: "Product Line" },
           { key: "cargoProduct", label: "Cargo Product" },
           { key: "coverType", label: "Cover Type" },

@@ -9,6 +9,8 @@ import {
   DOCUMENT_ALLOWED_MIME_TYPES,
   DOCUMENT_TYPES,
   MAX_DOCUMENT_SIZE_BYTES,
+  OPEN_COVER_CLIENT_LINK_MIN,
+  PARTY_STATUSES,
   PRODUCT_LINES,
   TRANSPORT_MODES,
 } from "@/lib/constants";
@@ -33,6 +35,8 @@ export const openCoverUpsertSchema = z
     clientName: z.string().min(1),
     clientCompany: z.string().min(1),
     insurerName: z.string().min(1),
+    insurerId: z.string().cuid().optional().nullable(),
+    clientIds: z.array(z.string().cuid()).optional().default([]),
     productLine: z.literal("CARGO"),
     cargoProduct: z.enum(CARGO_SUB_PRODUCTS),
     transportMode: z.enum(TRANSPORT_MODES),
@@ -41,6 +45,7 @@ export const openCoverUpsertSchema = z
     effectiveFrom: z.coerce.date(),
     effectiveTo: z.coerce.date(),
     notes: z.string().max(2000).optional().nullable(),
+    isActive: z.boolean().optional().default(true),
   })
   .superRefine((value, ctx) => {
     if (value.effectiveFrom > value.effectiveTo) {
@@ -48,6 +53,14 @@ export const openCoverUpsertSchema = z
         code: z.ZodIssueCode.custom,
         path: ["effectiveFrom"],
         message: "effectiveFrom must be before or equal to effectiveTo",
+      });
+    }
+
+    if (value.isActive && value.clientIds.length < OPEN_COVER_CLIENT_LINK_MIN) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["clientIds"],
+        message: "Active open cover requires at least one linked client",
       });
     }
   });
@@ -63,6 +76,8 @@ export const caseUpsertSchema = z
     clientEmail: z.string().email().optional().nullable(),
     clientPhone: z.string().optional().nullable(),
     clientCompany: z.string().optional().nullable(),
+    clientId: z.string().cuid().optional().nullable(),
+    insurerId: z.string().cuid().optional().nullable(),
     currency: z.enum(CURRENCIES),
     sumInsured: positiveAmount,
     clientRate: decimalRate,
@@ -88,8 +103,20 @@ export const caseUpsertSchema = z
       }
     }
 
-    if (value.coverType === "OPEN_COVER" && !value.openCoverId) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["openCoverId"], message: "openCoverId is required for OPEN_COVER" });
+    if (value.coverType === "OPEN_COVER") {
+      if (!value.openCoverId) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["openCoverId"], message: "openCoverId is required for OPEN_COVER" });
+      }
+      if (!value.clientId) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["clientId"], message: "clientId is required for OPEN_COVER" });
+      }
+    } else {
+      if (!value.clientId) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["clientId"], message: "clientId is required" });
+      }
+      if (!value.insurerId) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["insurerId"], message: "insurerId is required" });
+      }
     }
 
     if (value.clientRate < value.insurerRate) {
@@ -107,6 +134,8 @@ export const caseListFilterSchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().refine((v) => v === 20, { message: "pageSize must be 20" }).default(20),
   q: z.string().optional(),
+  clientId: z.string().cuid().optional(),
+  insurerId: z.string().cuid().optional(),
   status: z
     .preprocess((value) => {
       if (typeof value !== "string" || value.trim() === "") {
@@ -173,6 +202,14 @@ export const settlementCreateSchema = z.object({
     .string()
     .trim()
     .regex(settlementPeriodRegex, "period must be YYYY-MM"),
+});
+
+export const partyUpsertSchema = z.object({
+  displayName: z.string().trim().min(1),
+  company: z.string().trim().optional().nullable(),
+  email: z.string().email().optional().nullable(),
+  phone: z.string().trim().optional().nullable(),
+  status: z.enum(PARTY_STATUSES).optional().default("ACTIVE"),
 });
 
 export const settlementListFilterSchema = z.object({
@@ -242,6 +279,8 @@ export const reportQuerySchema = z
     coverType: z
       .preprocess((value) => (typeof value === "string" ? value.split(",").map((v) => v.trim()).filter(Boolean) : value), z.array(z.enum(COVER_TYPES)).optional())
       .optional(),
+    clientId: z.string().cuid().optional(),
+    insurerId: z.string().cuid().optional(),
     search: z.string().optional(),
     sortBy: z.enum(reportSortFields).default("createdAt"),
     sortDirection: z.enum(["asc", "desc"]).default("desc"),

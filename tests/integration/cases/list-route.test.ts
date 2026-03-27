@@ -1,4 +1,4 @@
-﻿import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import { caseListFilterSchema } from "@/lib/validations";
 import { buildCaseListQuery } from "@/../tests/integration/cases/helpers";
@@ -10,6 +10,8 @@ describe("GET /api/cases list route", () => {
         q: "BRK-2026",
         status: ["DRAFT", "ACTIVE"],
         productLine: "CARGO",
+        clientId: "cmaaaaaaaaaaaaaaaaaaaaaa1",
+        insurerId: "cmaaaaaaaaaaaaaaaaaaaaaa2",
         page: 2,
         pageSize: 20,
         sortBy: "createdAt",
@@ -21,6 +23,8 @@ describe("GET /api/cases list route", () => {
     expect(parsed.success).toBe(true);
     if (parsed.success) {
       expect(parsed.data.status).toEqual(["DRAFT", "ACTIVE"]);
+      expect(parsed.data.clientId).toBe("cmaaaaaaaaaaaaaaaaaaaaaa1");
+      expect(parsed.data.insurerId).toBe("cmaaaaaaaaaaaaaaaaaaaaaa2");
       expect(parsed.data.page).toBe(2);
       expect(parsed.data.pageSize).toBe(20);
     }

@@ -1,26 +1,23 @@
-﻿import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 
-import { validateTransitionInput } from "@/lib/status-transitions";
+import { caseUpsertSchema } from "@/lib/validations";
 
 describe("PUT /api/cases/[id] editable statuses", () => {
-  it("keeps non-transition validation green for editable states", () => {
-    const error = validateTransitionInput({
-      fromStatus: "DRAFT",
-      toStatus: "DOCUMENTATION",
-      caseData: {
-        productLine: "CARGO",
-        clientName: "PT Test",
-        cargoProduct: "CPO",
-        coverType: "SINGLE_SHIPMENT",
-        origin: "Dumai",
-        destination: "Jakarta",
-        sumInsured: 100,
-        clientRate: 1,
-        insurerRate: 0.5,
-      },
-      documentCount: 0,
+  it("requires clientId and insurerId for single-shipment updates", () => {
+    const parsed = caseUpsertSchema.safeParse({
+      productLine: "CARGO",
+      cargoProduct: "CPO",
+      coverType: "SINGLE_SHIPMENT",
+      transportMode: "MARINE",
+      clientId: null,
+      insurerId: null,
+      clientName: "PT Test",
+      currency: "USD",
+      sumInsured: 100,
+      clientRate: 1,
+      insurerRate: 0.5,
     });
 
-    expect(error).toBeNull();
+    expect(parsed.success).toBe(false);
   });
 });

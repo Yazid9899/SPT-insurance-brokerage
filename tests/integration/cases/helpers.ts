@@ -4,6 +4,8 @@
   productLine?: string;
   cargoProduct?: string;
   coverType?: string;
+  clientId?: string;
+  insurerId?: string;
   page?: number;
   pageSize?: number;
   sortBy?: string;
@@ -15,6 +17,8 @@
   if (params.productLine) search.set("productLine", params.productLine);
   if (params.cargoProduct) search.set("cargoProduct", params.cargoProduct);
   if (params.coverType) search.set("coverType", params.coverType);
+  if (params.clientId) search.set("clientId", params.clientId);
+  if (params.insurerId) search.set("insurerId", params.insurerId);
   if (params.page) search.set("page", String(params.page));
   if (params.pageSize) search.set("pageSize", String(params.pageSize));
   if (params.sortBy) search.set("sortBy", params.sortBy);

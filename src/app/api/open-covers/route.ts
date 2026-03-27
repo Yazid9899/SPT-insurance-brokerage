@@ -13,8 +13,10 @@ function toListItem(openCover: {
   reference: string;
   clientName: string;
   clientCompany: string;
+  clientLinks?: Array<{ clientId: string }>;
   cargoProduct: string | null;
   insurerName: string;
+  insurerId?: string | null;
   insurerRate: Prisma.Decimal;
   effectiveFrom: Date;
   effectiveTo: Date;
@@ -25,8 +27,10 @@ function toListItem(openCover: {
     reference: openCover.reference,
     clientName: openCover.clientName,
     clientCompany: openCover.clientCompany,
+    clientIds: openCover.clientLinks?.map((c) => c.clientId) ?? [],
     cargoProduct: openCover.cargoProduct,
     insurerName: openCover.insurerName,
+    insurerId: openCover.insurerId ?? null,
     insurerRate: openCover.insurerRate.toFixed(6),
     effectiveFrom: openCover.effectiveFrom.toISOString(),
     effectiveTo: openCover.effectiveTo.toISOString(),
@@ -79,7 +83,7 @@ export async function GET(request: NextRequest) {
       orderBy: { createdAt: "desc" },
       skip: (page - 1) * pageSize,
       take: pageSize,
-      include: { cases: { select: { id: true } } },
+      include: { cases: { select: { id: true } }, clientLinks: { select: { clientId: true } } },
     }),
   ]);
 
@@ -104,6 +108,20 @@ export async function POST(request: NextRequest) {
   }
 
   const payload = parsed.data;
+  const [insurer, clients] = await Promise.all([
+    payload.insurerId ? prisma.insurer.findUnique({ where: { id: payload.insurerId } }) : null,
+    payload.clientIds.length > 0 ? prisma.client.findMany({ where: { id: { in: payload.clientIds } } }) : [],
+  ]);
+
+  if (payload.insurerId && (!insurer || insurer.status !== "ACTIVE")) {
+    return NextResponse.json(apiError("Insurer not found or inactive"), { status: 409 });
+  }
+
+  const activeClientIds = clients.filter((c) => c.status === "ACTIVE").map((c) => c.id);
+  if (payload.clientIds.length > 0 && activeClientIds.length !== payload.clientIds.length) {
+    return NextResponse.json(apiError("One or more selected clients are inactive or invalid"), { status: 409 });
+  }
+  const snapshotClient = clients[0] ?? null;
 
   try {
     const created = await prisma.openCover.create({
@@ -111,7 +129,8 @@ export async function POST(request: NextRequest) {
         reference: payload.reference,
         clientName: payload.clientName,
         clientCompany: payload.clientCompany,
-        insurerName: payload.insurerName,
+        insurerName: insurer?.displayName ?? payload.insurerName,
+        insurerId: payload.insurerId ?? null,
         cargoProduct: payload.cargoProduct,
         transportMode: payload.transportMode,
         currency: payload.currency as Currency,
@@ -120,8 +139,16 @@ export async function POST(request: NextRequest) {
         effectiveTo: payload.effectiveTo,
         isActive: true,
         notes: payload.notes ?? null,
+        clientLinks: payload.clientIds.length
+          ? {
+              createMany: {
+                data: payload.clientIds.map((clientId) => ({ clientId })),
+                skipDuplicates: true,
+              },
+            }
+          : undefined,
       },
-      include: { cases: { select: { id: true } } },
+      include: { cases: { select: { id: true } }, clientLinks: { select: { clientId: true } } },
     });
 
     return NextResponse.json(
@@ -131,6 +158,8 @@ export async function POST(request: NextRequest) {
         transportMode: created.transportMode,
         currency: created.currency,
         notes: created.notes,
+        clientName: snapshotClient?.displayName ?? created.clientName,
+        clientCompany: snapshotClient?.company ?? created.clientCompany,
       },
       { status: 201 },
     );

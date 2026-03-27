@@ -38,6 +38,8 @@ export type ReportFilters = {
   productLine?: ProductLine[];
   cargoProduct?: CargoProduct[];
   coverType?: CoverType[];
+  clientId?: string;
+  insurerId?: string;
   search?: string;
   sortBy?: ReportCaseSortField;
   sortDirection?: "asc" | "desc";
@@ -83,6 +85,7 @@ export type CommissionBreakdown = {
 export type ReportCaseRow = {
   caseNumber: string;
   clientName: string;
+  insurerName: string | null;
   productLine: ProductLine;
   cargoProduct: CargoProduct | null;
   coverType: CoverType | null;
@@ -175,6 +178,8 @@ export function parseReportFilters(input: Record<string, unknown>): ReportFilter
       ["OPEN_COVER", "SINGLE_SHIPMENT"] as const,
       parseArrayParam(typeof input.coverType === "string" || Array.isArray(input.coverType) ? input.coverType : undefined),
     ) as CoverType[] | undefined,
+    clientId: typeof input.clientId === "string" ? input.clientId : undefined,
+    insurerId: typeof input.insurerId === "string" ? input.insurerId : undefined,
     search: searchRaw?.trim() || undefined,
     sortBy: (REPORT_CASE_SORT_FIELDS as readonly string[]).includes(sortBy ?? "") ? (sortBy as ReportCaseSortField) : "createdAt",
     sortDirection: sortDirection === "asc" ? "asc" : "desc",
@@ -200,6 +205,8 @@ function buildWhere(filters: ReportFilters): Prisma.CaseWhereInput {
   if (filters.productLine?.length) where.productLine = { in: filters.productLine };
   if (filters.cargoProduct?.length) where.cargoProduct = { in: filters.cargoProduct };
   if (filters.coverType?.length) where.coverType = { in: filters.coverType };
+  if (filters.clientId) where.clientId = filters.clientId;
+  if (filters.insurerId) where.insurerId = filters.insurerId;
   if (filters.search) {
     where.OR = [
       { caseNumber: { contains: filters.search, mode: "insensitive" } },
@@ -233,10 +240,12 @@ function toCaseRow(item: {
   createdAt: Date;
   closedAt: Date | null;
   openCover: { reference: string } | null;
+  insurer: { displayName: string } | null;
 }): ReportCaseRow {
   return {
     caseNumber: item.caseNumber,
     clientName: item.clientName,
+    insurerName: item.insurer?.displayName ?? null,
     productLine: item.productLine,
     cargoProduct: item.cargoProduct,
     coverType: item.coverType,
@@ -415,6 +424,7 @@ export async function getCommissionBreakdown(filters: ReportFilters): Promise<Co
     select: {
       createdAt: true,
       brokerCommission: true,
+      insurer: { select: { displayName: true } },
       openCover: { select: { insurerName: true } },
     },
   });
@@ -423,7 +433,7 @@ export async function getCommissionBreakdown(filters: ReportFilters): Promise<Co
   const monthTotals = new Map<string, Decimal>();
 
   items.forEach((item) => {
-    const insurerName = item.openCover?.insurerName ?? "Unassigned";
+    const insurerName = item.insurer?.displayName ?? item.openCover?.insurerName ?? "Unassigned";
     const found = insurerTotals.get(insurerName) ?? { total: new Decimal(0), count: 0 };
     found.total = found.total.plus(new Decimal(item.brokerCommission));
     found.count += 1;
@@ -471,6 +481,7 @@ export async function getReportCases(filters: ReportFilters) {
     eta: true,
     createdAt: true,
     closedAt: true,
+    insurer: { select: { displayName: true } },
     openCover: { select: { reference: true } },
   } satisfies Prisma.CaseSelect;
 
@@ -518,6 +529,7 @@ export async function getExportRows(filters: ReportFilters) {
       eta: true,
       createdAt: true,
       closedAt: true,
+      insurer: { select: { displayName: true } },
       openCover: { select: { reference: true } },
     },
   });

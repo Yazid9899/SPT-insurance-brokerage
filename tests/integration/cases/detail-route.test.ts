@@ -1,12 +1,15 @@
-﻿import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 
 describe("GET /api/cases/[id] detail route", () => {
-  it("returns expected detail shape", () => {
+  it("returns normalized party fields in detail payload", () => {
     const payload = {
       id: "c1",
       caseNumber: "BRK-2026-0001",
       status: "DRAFT",
       productLine: "CARGO",
+      clientId: "client-1",
+      insurerId: "insurer-1",
+      insurerName: "Insurer One",
       clientName: "PT Test",
       sumInsured: "1000.00",
       clientRate: "0.200000",
@@ -17,8 +20,8 @@ describe("GET /api/cases/[id] detail route", () => {
       statusHistory: [],
     };
 
-    expect(payload).toHaveProperty("id");
-    expect(payload).toHaveProperty("statusHistory");
-    expect(Array.isArray(payload.statusHistory)).toBe(true);
+    expect(payload).toHaveProperty("clientId");
+    expect(payload).toHaveProperty("insurerId");
+    expect(payload).toHaveProperty("insurerName");
   });
 });

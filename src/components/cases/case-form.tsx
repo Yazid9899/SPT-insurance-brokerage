@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React from "react";
 
@@ -11,20 +11,21 @@ import { z } from "zod";
 import { calculatePremiums } from "@/lib/calculations";
 import { CARGO_SUB_PRODUCTS, CURRENCIES, COVER_TYPES, PRODUCT_LINES, TRANSPORT_MODES } from "@/lib/constants";
 import { caseUpsertSchema } from "@/lib/validations";
+import type { PartyOption } from "@/types";
+
+type OpenCoverOption = {
+  id: string;
+  reference: string;
+  insurerRate: string;
+  currency: string;
+  insurerId: string | null;
+  linkedClients: PartyOption[];
+};
 
 const formSchema = caseUpsertSchema;
 
 type FormInput = z.input<typeof caseUpsertSchema>;
 type FormValues = z.output<typeof caseUpsertSchema>;
-
-type OpenCoverOption = {
-  id: string;
-  reference: string;
-  clientName: string;
-  clientCompany: string;
-  insurerRate: string;
-  currency: string;
-};
 
 const defaultValues: FormValues = {
   productLine: "CARGO",
@@ -32,6 +33,8 @@ const defaultValues: FormValues = {
   coverType: "SINGLE_SHIPMENT",
   transportMode: "MARINE",
   openCoverId: null,
+  clientId: null,
+  insurerId: null,
   clientName: "",
   clientEmail: null,
   clientPhone: null,
@@ -53,13 +56,18 @@ export function CaseForm({
   mode = "create",
   caseId,
   initialValues,
+  clients = [],
+  insurers = [],
+  openCovers = [],
 }: {
   mode?: "create" | "edit";
   caseId?: string;
   initialValues?: Partial<FormInput>;
+  clients?: PartyOption[];
+  insurers?: PartyOption[];
+  openCovers?: OpenCoverOption[];
 }) {
   const router = useRouter();
-  const [openCoverOptions, setOpenCoverOptions] = useState<OpenCoverOption[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -74,14 +82,20 @@ export function CaseForm({
   const productLine = form.watch("productLine");
   const coverType = form.watch("coverType");
   const selectedOpenCoverId = form.watch("openCoverId");
+  const selectedClientId = form.watch("clientId");
   const sumInsured = Number(form.watch("sumInsured") ?? 0);
   const clientRate = Number(form.watch("clientRate") ?? 0);
   const insurerRate = Number(form.watch("insurerRate") ?? 0);
 
-  const selectedOpenCover = useMemo(
-    () => openCoverOptions.find((item) => item.id === selectedOpenCoverId) ?? null,
-    [openCoverOptions, selectedOpenCoverId],
-  );
+  const selectedOpenCover = useMemo(() => openCovers.find((item) => item.id === selectedOpenCoverId) ?? null, [openCovers, selectedOpenCoverId]);
+  const availableClients = useMemo(() => {
+    if (coverType === "OPEN_COVER") {
+      return selectedOpenCover?.linkedClients ?? [];
+    }
+    return clients;
+  }, [clients, coverType, selectedOpenCover]);
+
+  const selectedClient = useMemo(() => availableClients.find((item) => item.id === selectedClientId) ?? null, [availableClients, selectedClientId]);
 
   const premiums = useMemo(() => {
     if (!sumInsured || sumInsured <= 0) {
@@ -92,28 +106,25 @@ export function CaseForm({
   }, [clientRate, insurerRate, sumInsured]);
 
   useEffect(() => {
-    if (productLine !== "CARGO" || coverType !== "OPEN_COVER") {
-      return;
-    }
-
-    void fetch("/api/open-covers?activeOnly=true&pageSize=200")
-      .then(async (response) => {
-        const body = (await response.json()) as { items?: OpenCoverOption[] };
-        setOpenCoverOptions(body.items ?? []);
-      })
-      .catch(() => setOpenCoverOptions([]));
-  }, [coverType, productLine]);
-
-  useEffect(() => {
     if (coverType !== "OPEN_COVER" || !selectedOpenCover) {
       return;
     }
 
-    form.setValue("clientName", selectedOpenCover.clientName);
-    form.setValue("clientCompany", selectedOpenCover.clientCompany);
+    form.setValue("insurerId", selectedOpenCover.insurerId ?? null);
     form.setValue("insurerRate", Number(selectedOpenCover.insurerRate));
     form.setValue("currency", selectedOpenCover.currency as FormValues["currency"]);
   }, [coverType, form, selectedOpenCover]);
+
+  useEffect(() => {
+    if (!selectedClient) {
+      return;
+    }
+
+    form.setValue("clientName", selectedClient.displayName);
+    form.setValue("clientCompany", selectedClient.company ?? null);
+    form.setValue("clientEmail", selectedClient.email ?? null);
+    form.setValue("clientPhone", selectedClient.phone ?? null);
+  }, [selectedClient, form]);
 
   useEffect(() => {
     if (productLine !== "CARGO") {
@@ -228,9 +239,9 @@ export function CaseForm({
                 <span className="text-sm">Open Cover Agreement</span>
                 <select className="w-full rounded border px-2 py-1" {...form.register("openCoverId")}>
                   <option value="">Select active open cover</option>
-                  {openCoverOptions.map((item) => (
+                  {openCovers.map((item) => (
                     <option key={item.id} value={item.id}>
-                      {item.reference} - {item.clientName}
+                      {item.reference}
                     </option>
                   ))}
                 </select>
@@ -240,23 +251,47 @@ export function CaseForm({
         ) : null}
 
         <label className="space-y-1">
-          <span className="text-sm">Client Name</span>
-          <input className="w-full rounded border px-2 py-1" {...form.register("clientName")} />
+          <span className="text-sm">Client</span>
+          <select className="w-full rounded border px-2 py-1" {...form.register("clientId")}>
+            <option value="">Select client</option>
+            {availableClients.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.displayName} {item.company ? `(${item.company})` : ""}
+              </option>
+            ))}
+          </select>
         </label>
 
         <label className="space-y-1">
-          <span className="text-sm">Client Company</span>
-          <input className="w-full rounded border px-2 py-1" {...form.register("clientCompany")} />
+          <span className="text-sm">Insurer</span>
+          <select className="w-full rounded border px-2 py-1" {...form.register("insurerId")} disabled={coverType === "OPEN_COVER"}>
+            <option value="">Select insurer</option>
+            {insurers.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.displayName}
+              </option>
+            ))}
+          </select>
         </label>
 
         <label className="space-y-1">
-          <span className="text-sm">Client Email</span>
-          <input className="w-full rounded border px-2 py-1" type="email" {...form.register("clientEmail")} />
+          <span className="text-sm">Client Name Snapshot</span>
+          <input className="w-full rounded border px-2 py-1" {...form.register("clientName")} readOnly />
         </label>
 
         <label className="space-y-1">
-          <span className="text-sm">Client Phone</span>
-          <input className="w-full rounded border px-2 py-1" {...form.register("clientPhone")} />
+          <span className="text-sm">Client Company Snapshot</span>
+          <input className="w-full rounded border px-2 py-1" {...form.register("clientCompany")} readOnly />
+        </label>
+
+        <label className="space-y-1">
+          <span className="text-sm">Client Email Snapshot</span>
+          <input className="w-full rounded border px-2 py-1" type="email" {...form.register("clientEmail")} readOnly />
+        </label>
+
+        <label className="space-y-1">
+          <span className="text-sm">Client Phone Snapshot</span>
+          <input className="w-full rounded border px-2 py-1" {...form.register("clientPhone")} readOnly />
         </label>
 
         <label className="space-y-1">
@@ -350,6 +385,3 @@ export function CaseForm({
     </form>
   );
 }
-
-
-

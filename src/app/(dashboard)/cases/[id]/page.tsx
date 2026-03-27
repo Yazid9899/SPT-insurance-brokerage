@@ -9,6 +9,7 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
   const found = await prisma.case.findFirst({
     where: { id, deletedAt: null },
     include: {
+      insurer: { select: { displayName: true } },
       openCover: { select: { reference: true, insurerName: true } },
       settlementItems: {
         include: { settlement: true },
@@ -37,6 +38,8 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
           cargoProduct: found.cargoProduct,
           coverType: found.coverType,
           clientName: found.clientName,
+          clientId: found.clientId,
+          insurerId: found.insurerId,
           clientEmail: found.clientEmail,
           currency: found.currency,
           sumInsured: found.sumInsured.toFixed(2),
@@ -54,7 +57,7 @@ export default async function CaseDetailPage({ params }: { params: Promise<{ id:
           notes: found.notes,
           openCoverId: found.openCoverId,
           openCoverReference: found.openCover?.reference ?? null,
-          insurerName: found.openCover?.insurerName ?? null,
+          insurerName: found.insurer?.displayName ?? found.openCover?.insurerName ?? null,
           documentsApiUrl: `/api/cases/${found.id}/documents`,
           settlementData: latestSettlement
             ? {

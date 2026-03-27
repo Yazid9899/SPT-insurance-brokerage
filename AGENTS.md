@@ -1,6 +1,6 @@
 # SPT-insurance-brokerage Development Guidelines
 
-Auto-generated from all feature plans. Last updated: 2026-03-26
+Auto-generated from all feature plans. Last updated: 2026-03-27
 
 ## Active Technologies
 - TypeScript (strict mode), Node.js 20 LTS, Next.js App Router + Next.js, React, Prisma, Zod, react-hook-form, `@hookform/resolvers`, NextAuth.js, Tailwind CSS (002-open-cover-management)

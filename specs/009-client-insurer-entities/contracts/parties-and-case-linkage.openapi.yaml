@@ -1,0 +1,133 @@
+openapi: 3.0.3
+info:
+  title: CargoShield Party Linkage Contracts
+  version: 0.2.0
+  description: >
+    Additive API contract extensions for normalized Client/Insurer linkage,
+    open-cover multi-client support, and compatibility fallbacks.
+
+paths:
+  /api/cases:
+    post:
+      summary: Create case with additive party linkage fields
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                clientId: { type: string }
+                insurerId: { type: string }
+                openCoverId: { type: string, nullable: true }
+              additionalProperties: true
+      responses:
+        "201":
+          description: Created
+
+  /api/cases/{id}:
+    put:
+      summary: Update case with additive party linkage fields
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Updated
+    get:
+      summary: Case detail with normalized identity fallback projection
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+
+  /api/open-covers:
+    post:
+      summary: Create open cover with insurer and linked client IDs
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                insurerId: { type: string }
+                clientIds:
+                  type: array
+                  items: { type: string }
+              additionalProperties: true
+      responses:
+        "201":
+          description: Created
+    get:
+      summary: List open covers with linked-client summary
+      responses:
+        "200":
+          description: OK
+
+  /api/open-covers/{id}:
+    put:
+      summary: Update open cover insurer and linked clients
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                insurerId: { type: string }
+                clientIds:
+                  type: array
+                  items: { type: string }
+              additionalProperties: true
+      responses:
+        "200":
+          description: Updated
+
+  /api/reports/cases:
+    get:
+      summary: Report rows with client/insurer filtering
+      parameters:
+        - in: query
+          name: clientId
+          schema: { type: string }
+        - in: query
+          name: insurerId
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+
+  /api/reports/commission:
+    get:
+      summary: Commission grouping by normalized insurer with legacy fallback
+      parameters:
+        - in: query
+          name: insurerId
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+
+components:
+  schemas:
+    ApiError:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+        details:
+          type: object
+          additionalProperties: true

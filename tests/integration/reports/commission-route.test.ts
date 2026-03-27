@@ -7,6 +7,7 @@ describe("GET /api/reports/commission", () => {
     const parsed = reportQuerySchema.safeParse({
       dateFrom: "2026-01-01",
       dateTo: "2026-03-31",
+      insurerId: "cmaaaaaaaaaaaaaaaaaaaaaa2",
       productLine: "CARGO",
     });
     expect(parsed.success).toBe(true);

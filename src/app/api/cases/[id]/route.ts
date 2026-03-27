@@ -6,6 +6,7 @@ import { apiError } from "@/lib/api-error";
 import { canManageCase, authOptions } from "@/lib/auth";
 import { calculatePremiums } from "@/lib/calculations";
 import { isOpenCoverActive } from "@/lib/open-cover-status";
+import { PartyService } from "@/lib/party-service";
 import { prisma } from "@/lib/prisma";
 import { caseUpsertSchema } from "@/lib/validations";
 
@@ -20,6 +21,9 @@ function toCaseDetail(item: {
   coverType: string | null;
   clientName: string;
   clientCompany: string | null;
+  clientId: string | null;
+  insurerId: string | null;
+  insurer: { displayName: string } | null;
   currency: Currency;
   sumInsured: { toFixed: (d: number) => string };
   clientRate: { toFixed: (d: number) => string };
@@ -47,6 +51,9 @@ function toCaseDetail(item: {
     coverType: item.coverType,
     clientName: item.clientName,
     clientCompany: item.clientCompany,
+    clientId: item.clientId,
+    insurerId: item.insurerId,
+    insurerName: item.insurer?.displayName ?? null,
     currency: item.currency,
     sumInsured: item.sumInsured.toFixed(2),
     clientRate: item.clientRate.toFixed(6),
@@ -83,7 +90,7 @@ export async function GET(_request: NextRequest, context: { params: Promise<{ id
   const { id } = await context.params;
   const found = await prisma.case.findFirst({
     where: { id, deletedAt: null },
-    include: { statusHistory: { orderBy: { changedAt: "desc" } } },
+    include: { statusHistory: { orderBy: { changedAt: "desc" } }, insurer: { select: { displayName: true } } },
   });
 
   if (!found) {
@@ -122,6 +129,9 @@ export async function PUT(request: NextRequest, context: { params: Promise<{ id:
   let currency = payload.currency;
   let clientName = payload.clientName;
   let clientCompany = payload.clientCompany ?? null;
+  let clientId = payload.clientId ?? existingCase.clientId;
+  let insurerId = payload.insurerId ?? existingCase.insurerId;
+  const partyService = new PartyService(prisma as never);
 
   if (payload.coverType === CoverType.OPEN_COVER) {
     const openCoverId = payload.openCoverId ?? existingCase.openCoverId;
@@ -129,7 +139,10 @@ export async function PUT(request: NextRequest, context: { params: Promise<{ id:
       return NextResponse.json(apiError("openCoverId is required for OPEN_COVER"), { status: 400 });
     }
 
-    const openCover = await prisma.openCover.findUnique({ where: { id: openCoverId } });
+    const openCover = await prisma.openCover.findUnique({
+      where: { id: openCoverId },
+      include: { clientLinks: { select: { clientId: true } } },
+    });
     if (!openCover) {
       return NextResponse.json(apiError("Open cover not found"), { status: 404 });
     }
@@ -140,8 +153,39 @@ export async function PUT(request: NextRequest, context: { params: Promise<{ id:
 
     insurerRate = Number(openCover.insurerRate);
     currency = openCover.currency;
-    clientName = openCover.clientName;
-    clientCompany = openCover.clientCompany;
+    insurerId = openCover.insurerId;
+    clientId = payload.clientId ?? existingCase.clientId;
+    if (!clientId) {
+      return NextResponse.json(apiError("clientId is required for OPEN_COVER"), { status: 400 });
+    }
+
+    const membership = await partyService.assertOpenCoverClientMembership(openCover.id, clientId);
+    if (!membership.ok) {
+      return NextResponse.json(apiError(membership.reason === "inactive-client" ? "Selected client is inactive" : "Selected client is not linked to open cover"), { status: 409 });
+    }
+
+    const linkedClient = await prisma.client.findUnique({ where: { id: clientId } });
+    if (!linkedClient) {
+      return NextResponse.json(apiError("Client not found"), { status: 404 });
+    }
+    clientName = linkedClient.displayName;
+    clientCompany = linkedClient.company;
+  } else {
+    if (!clientId || !insurerId) {
+      return NextResponse.json(apiError("clientId and insurerId are required"), { status: 400 });
+    }
+    const [client, insurer] = await Promise.all([
+      prisma.client.findUnique({ where: { id: clientId } }),
+      prisma.insurer.findUnique({ where: { id: insurerId } }),
+    ]);
+    if (!client || client.status !== "ACTIVE") {
+      return NextResponse.json(apiError("Client not found or inactive"), { status: 409 });
+    }
+    if (!insurer || insurer.status !== "ACTIVE") {
+      return NextResponse.json(apiError("Insurer not found or inactive"), { status: 409 });
+    }
+    clientName = client.displayName;
+    clientCompany = client.company;
   }
 
   const premiums = calculatePremiums({
@@ -162,6 +206,8 @@ export async function PUT(request: NextRequest, context: { params: Promise<{ id:
       clientEmail: payload.clientEmail ?? null,
       clientPhone: payload.clientPhone ?? null,
       clientCompany,
+      clientId,
+      insurerId,
       currency: currency as Currency,
       sumInsured: payload.sumInsured,
       clientRate: payload.clientRate,
@@ -179,7 +225,11 @@ export async function PUT(request: NextRequest, context: { params: Promise<{ id:
     },
   });
 
-  return NextResponse.json(toCaseDetail(updated));
+  const updatedWithInsurer = await prisma.case.findUnique({
+    where: { id: updated.id },
+    include: { insurer: { select: { displayName: true } } },
+  });
+  return NextResponse.json(toCaseDetail(updatedWithInsurer ?? (updated as never)));
 }
 
 export async function DELETE(_request: NextRequest, context: { params: Promise<{ id: string }> }) {

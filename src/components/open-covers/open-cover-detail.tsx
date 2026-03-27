@@ -27,6 +27,12 @@ export function OpenCoverDetail({
         <p>
           <span className="font-medium">Insurer:</span> {agreement.insurerName}
         </p>
+        {agreement.linkedClients && agreement.linkedClients.length > 0 ? (
+          <p className="md:col-span-2">
+            <span className="font-medium">Linked Clients:</span>{" "}
+            {agreement.linkedClients.map((item) => `${item.displayName}${item.company ? ` (${item.company})` : ""}`).join(", ")}
+          </p>
+        ) : null}
         <p>
           <span className="font-medium">Cargo Product:</span> {agreement.cargoProduct ?? "-"}
         </p>

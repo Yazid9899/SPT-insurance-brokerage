@@ -67,6 +67,21 @@ enum SettlementStatus {
   PAID
 }
 
+enum PartyStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum PartyAuditAction {
+  MERGE
+  SPLIT
+}
+
+enum PartyAuditTarget {
+  CLIENT
+  INSURER
+}
+
 model User {
   id           String       @id @default(cuid())
   email        String       @unique
@@ -85,6 +100,7 @@ model OpenCover {
   clientName    String
   clientCompany String
   insurerName   String
+  insurerId     String?
   cargoProduct  CargoProduct?
   transportMode TransportMode?
   insurerRate   Decimal      @db.Decimal(8, 6)
@@ -96,9 +112,12 @@ model OpenCover {
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
   cases         Case[]
+  insurer       Insurer?     @relation(fields: [insurerId], references: [id])
+  clientLinks   OpenCoverClientLink[]
 
   @@index([clientName])
   @@index([isActive])
+  @@index([insurerId])
 }
 
 model Case {
@@ -112,6 +131,8 @@ model Case {
   clientEmail      String?
   clientPhone      String?
   clientCompany    String?
+  clientId         String?
+  insurerId        String?
   openCoverId      String?
   status           CaseStatus          @default(DRAFT)
   closedAt         DateTime?
@@ -136,6 +157,8 @@ model Case {
   updatedAt        DateTime            @updatedAt
   createdBy        User                @relation(fields: [createdById], references: [id])
   openCover        OpenCover?          @relation(fields: [openCoverId], references: [id])
+  client           Client?             @relation(fields: [clientId], references: [id])
+  insurer          Insurer?            @relation(fields: [insurerId], references: [id])
   documents        CaseDocument[]
   emails           CaseEmail[]
   statusHistory    CaseStatusHistory[]
@@ -149,6 +172,70 @@ model Case {
   @@index([openCoverId])
   @@index([bulkUploadId])
   @@index([deletedAt])
+  @@index([clientId])
+  @@index([insurerId])
+}
+
+model Client {
+  id                String               @id @default(cuid())
+  displayName       String
+  company           String?
+  email             String?
+  phone             String?
+  normalizedName    String
+  normalizedCompany String
+  identityKey       String               @unique
+  status            PartyStatus          @default(ACTIVE)
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+  cases             Case[]
+  openCoverLinks    OpenCoverClientLink[]
+
+  @@index([normalizedName])
+  @@index([normalizedCompany])
+  @@index([status])
+}
+
+model Insurer {
+  id             String      @id @default(cuid())
+  displayName    String
+  email          String?
+  phone          String?
+  normalizedName String
+  identityKey    String      @unique
+  status         PartyStatus @default(ACTIVE)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  cases          Case[]
+  openCovers     OpenCover[]
+
+  @@index([normalizedName])
+  @@index([status])
+}
+
+model OpenCoverClientLink {
+  openCoverId String
+  clientId    String
+  createdAt   DateTime  @default(now())
+  openCover   OpenCover @relation(fields: [openCoverId], references: [id], onDelete: Cascade)
+  client      Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@id([openCoverId, clientId])
+  @@index([clientId])
+}
+
+model PartyMergeAudit {
+  id            String          @id @default(cuid())
+  targetType    PartyAuditTarget
+  action        PartyAuditAction
+  sourceIds     String[]
+  destinationId String?
+  requestedById String
+  approvedById  String
+  reason        String
+  createdAt     DateTime        @default(now())
+
+  @@index([targetType, createdAt])
 }
 
 model CaseDocument {

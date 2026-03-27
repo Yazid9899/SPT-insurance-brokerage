@@ -1,8 +1,10 @@
-﻿export const sampleCargoCasePayload = {
+export const sampleCargoCasePayload = {
   productLine: "CARGO",
   cargoProduct: "CPO",
   coverType: "SINGLE_SHIPMENT",
   transportMode: "MARINE",
+  clientId: "cmaaaaaaaaaaaaaaaaaaaaaa1",
+  insurerId: "cmaaaaaaaaaaaaaaaaaaaaaa2",
   clientName: "PT Sawit Nusantara",
   clientCompany: "PT Sawit Nusantara",
   clientEmail: "ops@ptsawit.test",
@@ -19,6 +21,8 @@
 
 export const sampleNonCargoCasePayload = {
   productLine: "PROPERTY",
+  clientId: "cmaaaaaaaaaaaaaaaaaaaaaa3",
+  insurerId: "cmaaaaaaaaaaaaaaaaaaaaaa4",
   clientName: "PT Utility Test",
   currency: "IDR",
   sumInsured: 100000000,

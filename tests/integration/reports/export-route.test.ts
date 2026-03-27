@@ -13,6 +13,8 @@ describe("GET /api/reports/export", () => {
     const parsed = reportQuerySchema.safeParse({
       dateFrom: "2026-03-01",
       dateTo: "2026-03-31",
+      clientId: "cmaaaaaaaaaaaaaaaaaaaaaa1",
+      insurerId: "cmaaaaaaaaaaaaaaaaaaaaaa2",
       status: "ACTIVE",
       search: "PT",
       sortBy: "createdAt",

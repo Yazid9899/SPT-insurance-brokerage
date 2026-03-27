@@ -15,6 +15,8 @@ export default async function CasesPage({
   const productLine = typeof query.productLine === "string" ? query.productLine : "";
   const cargoProduct = typeof query.cargoProduct === "string" ? query.cargoProduct : "";
   const coverType = typeof query.coverType === "string" ? query.coverType : "";
+  const clientId = typeof query.clientId === "string" ? query.clientId : "";
+  const insurerId = typeof query.insurerId === "string" ? query.insurerId : "";
   const bulkUploadId = typeof query.bulkUploadId === "string" ? query.bulkUploadId : "";
   const page = Math.max(1, Number(typeof query.page === "string" ? query.page : "1") || 1);
 
@@ -24,6 +26,7 @@ export default async function CasesPage({
     .filter(Boolean);
 
   const where = {
+    deletedAt: null,
     ...(q
       ? {
           OR: [
@@ -36,18 +39,27 @@ export default async function CasesPage({
     ...(productLine ? { productLine: productLine as never } : {}),
     ...(cargoProduct ? { cargoProduct: cargoProduct as never } : {}),
     ...(coverType ? { coverType: coverType as never } : {}),
+    ...(clientId ? { clientId } : {}),
+    ...(insurerId ? { insurerId } : {}),
     ...(bulkUploadId ? { bulkUploadId } : {}),
   };
 
   const [total, cases] = await Promise.all([
     prisma.case.count({ where }),
-    prisma.case.findMany({ where, orderBy: { createdAt: "desc" }, skip: (page - 1) * PAGE_SIZE, take: PAGE_SIZE }),
+    prisma.case.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      skip: (page - 1) * PAGE_SIZE,
+      take: PAGE_SIZE,
+      include: { insurer: { select: { displayName: true } } },
+    }),
   ]);
 
   const rows: CaseListRow[] = cases.map((item) => ({
     id: item.id,
     caseNumber: item.caseNumber,
     clientName: item.clientName,
+    insurerName: item.insurer?.displayName ?? null,
     productLine: item.productLine,
     cargoProduct: item.cargoProduct,
     coverType: item.coverType,
@@ -69,6 +81,8 @@ export default async function CasesPage({
         <input type="text" name="productLine" defaultValue={productLine} placeholder="product line" className="rounded border px-2 py-1" />
         <input type="text" name="cargoProduct" defaultValue={cargoProduct} placeholder="cargo product" className="rounded border px-2 py-1" />
         <input type="text" name="coverType" defaultValue={coverType} placeholder="cover type" className="rounded border px-2 py-1" />
+        <input type="text" name="clientId" defaultValue={clientId} placeholder="client id" className="rounded border px-2 py-1" />
+        <input type="text" name="insurerId" defaultValue={insurerId} placeholder="insurer id" className="rounded border px-2 py-1" />
         <input type="text" name="bulkUploadId" defaultValue={bulkUploadId} placeholder="bulk upload id" className="rounded border px-2 py-1" />
         <input type="hidden" name="page" value="1" />
         <button type="submit" className="rounded border px-3 py-1 text-sm">Apply</button>
@@ -85,13 +99,13 @@ export default async function CasesPage({
         <div className="flex gap-2">
           <a
             className={`rounded border px-2 py-1 ${page <= 1 ? "pointer-events-none opacity-50" : ""}`}
-            href={`?q=${encodeURIComponent(q)}&status=${encodeURIComponent(statusCsv)}&productLine=${encodeURIComponent(productLine)}&cargoProduct=${encodeURIComponent(cargoProduct)}&coverType=${encodeURIComponent(coverType)}&bulkUploadId=${encodeURIComponent(bulkUploadId)}&page=${Math.max(1, page - 1)}`}
+            href={`?q=${encodeURIComponent(q)}&status=${encodeURIComponent(statusCsv)}&productLine=${encodeURIComponent(productLine)}&cargoProduct=${encodeURIComponent(cargoProduct)}&coverType=${encodeURIComponent(coverType)}&clientId=${encodeURIComponent(clientId)}&insurerId=${encodeURIComponent(insurerId)}&bulkUploadId=${encodeURIComponent(bulkUploadId)}&page=${Math.max(1, page - 1)}`}
           >
             Prev
           </a>
           <a
             className={`rounded border px-2 py-1 ${page >= totalPages ? "pointer-events-none opacity-50" : ""}`}
-            href={`?q=${encodeURIComponent(q)}&status=${encodeURIComponent(statusCsv)}&productLine=${encodeURIComponent(productLine)}&cargoProduct=${encodeURIComponent(cargoProduct)}&coverType=${encodeURIComponent(coverType)}&bulkUploadId=${encodeURIComponent(bulkUploadId)}&page=${Math.min(totalPages, page + 1)}`}
+            href={`?q=${encodeURIComponent(q)}&status=${encodeURIComponent(statusCsv)}&productLine=${encodeURIComponent(productLine)}&cargoProduct=${encodeURIComponent(cargoProduct)}&coverType=${encodeURIComponent(coverType)}&clientId=${encodeURIComponent(clientId)}&insurerId=${encodeURIComponent(insurerId)}&bulkUploadId=${encodeURIComponent(bulkUploadId)}&page=${Math.min(totalPages, page + 1)}`}
           >
             Next
           </a>

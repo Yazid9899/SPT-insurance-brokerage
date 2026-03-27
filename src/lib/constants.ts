@@ -14,6 +14,7 @@ export const CARGO_SUB_PRODUCTS = ["CPO", "BIODIESEL", "SHORTENING"] as const;
 export const COVER_TYPES = ["OPEN_COVER", "SINGLE_SHIPMENT"] as const;
 export const TRANSPORT_MODES = ["MARINE", "TRUCKING"] as const;
 export const CURRENCIES = ["IDR", "USD", "SGD", "MYR"] as const;
+export const PARTY_STATUSES = ["ACTIVE", "INACTIVE"] as const;
 export const DOCUMENT_TYPES = [
   "POLICY_DOCUMENT",
   "BILL_OF_LADING",
@@ -51,7 +52,10 @@ export const CASE_LIFECYCLE = [
 
 export type CaseLifecycleStatus = (typeof CASE_LIFECYCLE)[number];
 export type OpenCoverStatus = "ACTIVE" | "EXPIRED";
+export type PartyStatus = (typeof PARTY_STATUSES)[number];
 export type DocumentTypeValue = (typeof DOCUMENT_TYPES)[number];
+
+export const OPEN_COVER_CLIENT_LINK_MIN = 1;
 
 export const EXPECTED_DOCUMENTS_BY_STATUS: Partial<Record<CaseLifecycleStatus, readonly DocumentTypeValue[]>> = {
   DOCUMENTATION: ["BILL_OF_LADING", "COMMERCIAL_INVOICE", "PACKING_LIST"],
