@@ -27,7 +27,8 @@
 ## 1. Product Overview
 
 ### What
-A web-based Case Management System for an insurance brokerage. It manages the full lifecycle of insurance cases — from initial draft through documentation, underwriting, active coverage, billing, insurer settlement, and closure.
+A web-based Case Management System for an insurance brokerage. It manages the full lifecycle of insurance cases - from initial draft through documentation, underwriting, active coverage, billing, insurer settlement, and closure.
+The system uses first-class `Client/Insured` and `Insurer` entities for new records, while retaining legacy snapshot name/contact fields for backward compatibility and historical continuity.
 
 ### Who
 **Case Makers** — brokerage staff who create, track, and manage insurance cases. Single user role in Phase 1.
@@ -52,7 +53,7 @@ The system supports multiple insurance product lines. **Cargo Insurance** is ful
 | **Marine Hull** | Product label + generic case workflow only |
 | **Utility Insurance** | Product label + generic case workflow only |
 
-> These future product lines use the same case status flow but will have unique fields, documents, and business rules specified later. In Phase 1, cases created under these products use only the generic case fields (client, status, sum insured, dates, notes).
+> These future product lines use the same case status flow but will have unique fields, documents, and business rules specified later. In Phase 1, cases created under these products use only the generic case fields (client/insured, insurer, status, sum insured, dates, notes).
 
 ### Cover Types (Cargo Insurance Only)
 - **Open Cover Agreement** (primary) — Standing agreement with an underwriter covering multiple shipments. Each shipment is "declared" under the open cover. The **insurer rate is fixed** per open cover agreement.
@@ -218,6 +219,17 @@ User (Case Maker)
                     └── has many ──► SettlementItem (one per case)
 ```
 
+### Normalized Party Model (Current Scope)
+
+- Client and Insurer are first-class entities for new case/open-cover flows.
+- Case supports additive references: clientId and insurerId (snapshot fields remain for compatibility).
+- OpenCover supports additive insurerId and many-clients linkage through OpenCoverClientLink.
+- Open-cover runtime rules:
+  - One insurer per open cover.
+  - Active open cover must have at least one linked client.
+  - Open-cover case requires selecting a client linked to the selected open cover.
+  - Inactive clients cannot be selected for new open-cover cases.
+- Settlement remains name-based in this phase (Settlement.insurerName); direct settlement-insurer linkage is follow-up scope.
 ### Prisma Schema
 
 ```prisma
@@ -541,7 +553,7 @@ export const STATUS_TRANSITIONS: Record<CaseStatus, CaseStatus[]> = {
 
 | Transition | Validation |
 |---|---|
-| DRAFT → DOCUMENTATION | Client name, product line required. If cargo: cargoProduct, coverType required. |
+| DRAFT → DOCUMENTATION | Product line required. If cargo: cargoProduct and coverType required. For `OPEN_COVER`: open cover required, insurer derived from open cover, selected client must be linked to that open cover. For `SINGLE_SHIPMENT`: explicit client and insurer are required. |
 | DOCUMENTATION → UNDERWRITING | At least 1 document uploaded. Origin + destination required (cargo). |
 | UNDERWRITING → ACTIVE | Sum insured > 0, client rate > 0, insurer rate > 0. Client rate >= insurer rate. |
 | ACTIVE → BILLING | Auto-calculate premiums. Prompt to attach debit note. |
@@ -553,6 +565,8 @@ export const STATUS_TRANSITIONS: Record<CaseStatus, CaseStatus[]> = {
 
 When a case is linked to an Open Cover:
 - insurerRate auto-populates from OpenCover.insurerRate and is LOCKED (read-only).
+- insurer identity is derived from the selected open cover (no manual override in open-cover flow).
+- client selection is restricted to the selected open cover's linked client list.
 - clientRate is set per case by the case maker.
 - Changing the Open Cover selection auto-updates the insurer rate.
 
@@ -669,12 +683,17 @@ const HEADER_ALIASES: Record<string, string[]> = {
 
 ### 8.1 Case Tracking & Making
 - Single case creation with product line selector (Cargo shows full fields, others show generic)
+- Party-aware case creation/edit:
+  - SINGLE_SHIPMENT: select clientId and insurerId
+  - OPEN_COVER: insurer derived from selected open cover; client must be selected from linked clients
 - Bulk upload wizard (Section 7)
 - Case list with filters, search, pagination, bulk upload indicator
 - Case detail with tabs, dual rate financial breakdown, status transitions
 
 ### 8.2 Open Cover Management
 - CRUD for open cover agreements
+- One-insurer + many-clients structure (insurerId + clientIds[] linkage)
+- Active open cover validation requires at least one linked client
 - Fixed insurer rate per agreement
 - View all cases under an open cover
 
@@ -685,7 +704,7 @@ const HEADER_ALIASES: Record<string, string[]> = {
 
 ### 8.4 Operational Reporting
 - Dashboard: 6 stat cards, status chart, product breakdown, monthly commission, recent cases
-- Reports page: date range filter, commission by insurer, CSV export
+- Reports page: date range filter, client filter, insurer filter, commission by insurer, CSV export
 
 ### 8.5 Settlement Management
 - Create monthly settlement batches per insurer
@@ -712,6 +731,11 @@ const HEADER_ALIASES: Record<string, string[]> = {
 | DELETE | /api/cases/[id] | Delete (DRAFT only) |
 | POST | /api/cases/[id]/status | Transition status |
 
+Additive contract notes:
+- POST/PUT /api/cases accept clientId, insurerId, and openCoverId (where applicable).
+- In open-cover flows, insurer is derived from open cover and selected client must be linked to that open cover.
+- Responses may include normalized party references plus legacy snapshot fields for fallback compatibility.
+
 ### Documents
 | Method | Endpoint | Description |
 |---|---|---|
@@ -734,6 +758,10 @@ const HEADER_ALIASES: Record<string, string[]> = {
 | GET | /api/open-covers/[id] | Detail with cases |
 | PUT | /api/open-covers/[id] | Update |
 
+Additive contract notes:
+- POST/PUT /api/open-covers accept insurerId and clientIds[].
+- Active open covers must have at least one linked client.
+
 ### Settlements
 | Method | Endpoint | Description |
 |---|---|---|
@@ -751,6 +779,11 @@ const HEADER_ALIASES: Record<string, string[]> = {
 | GET | /api/reports/cases | Filtered data |
 | GET | /api/reports/commission | By period/insurer |
 | GET | /api/reports/export | CSV download |
+
+Additive contract notes:
+- /api/reports/cases supports clientId and insurerId query filters.
+- /api/reports/commission uses normalized insurer identity where available, with legacy-name fallback.
+- Settlement compatibility remains name-based in this phase.
 
 ---
 
@@ -917,6 +950,9 @@ export const STATUS_COLORS: Record<string, string> = {
 | Term | Definition |
 |---|---|
 | **Open Cover** | Standing agreement, fixed insurer rate, multiple shipments |
+| **Client/Insured (Entity)** | Canonical insured-party profile reused across cases and open covers |
+| **Insurer (Entity)** | Canonical insurer profile reused across cases and open covers |
+| **OpenCoverClientLink** | Join entity linking open covers to allowed clients |
 | **Single Shipment** | One-off policy (marine or trucking) |
 | **Client Rate** | Rate charged to client by broker (%) |
 | **Insurer Rate** | Rate broker pays insurer (%), fixed per open cover |
