@@ -82,6 +82,16 @@ enum PartyAuditTarget {
   INSURER
 }
 
+model NumberSequence {
+  scope     String
+  periodKey String
+  lastValue Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@id([scope, periodKey])
+}
+
 model User {
   id           String       @id @default(cuid())
   email        String       @unique
